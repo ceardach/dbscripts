@@ -1,0 +1,12 @@
+#!/usr/local/bin/php
+<?php
+require('db_settings.inc');
+
+/**
+ * Performs an unmanipulated restore of the production database
+ */
+
+exec($path."dbscripts/erase_prod_database");
+exec("mysql $db_connection_settings < ".$path."dbscripts/databases/production.sql");
+
+print("Database restored.\n");

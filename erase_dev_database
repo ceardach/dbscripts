@@ -1,0 +1,22 @@
+#!/usr/local/bin/php
+<?php
+require('db_settings.inc');
+
+/**
+ * Erases the development database, but leaves in certain tables that shouldn't be
+ * dropped.  
+ * 
+ * When switching database versions, newly dropped tables would remain within MySQL.  
+ * This ensures a clean restore.
+ */
+
+foreach($tables_preserved_dev as $preserved_data) {
+  $filter .= "|grep -v 'DROP TABLE IF EXISTS .$preserved_data.;'";
+}
+
+$dump_options = "--add-drop-table --no-data";
+
+exec("mysqldump $dump_options $db_connection_settings | grep 'DROP TABLE' $filter | mysql $db_connection_settings");
+
+print("Database erased.\n");
+

@@ -1,0 +1,19 @@
+#!/usr/local/bin/php
+<?php
+require('db_settings.inc');
+
+/**
+ * This script does not restore sequences, allowing for easy restoration of production in a
+ * development environment and for database merges to ensure sequences are preserved.
+ *
+ * Beware, this script will not work for fresh installs! 
+ */
+
+exec($path."dbscripts/erase_prod_database_sans_sequences");
+
+exec("grep -v 'DROP TABLE IF EXISTS .sequences.;' ".$path."dbscripts/databases/production.sql |sed 's/CREATE TABLE .sequences./CREATE TABLE IF NOT EXISTS `sequences`/g' |grep -v 'INSERT INTO .sequences. VALUES' > ".$path."dbscripts/databases/tmp/database.tmp");
+
+exec("mysql $db_connection_settings < ".$path."dbscripts/databases/tmp/database.tmp");
+exec("rm ".$path."dbscripts/databases/tmp/database.tmp");
+
+print("Database restored.\n");

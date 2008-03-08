@@ -1,0 +1,23 @@
+#!/usr/local/bin/php
+<?php
+require('db_settings.inc');
+
+/**
+ * Erases the production database, and leaves only the minimal tables preserved. This
+ * will preserve sequences table for development and database merge purposes.
+ * 
+ * When switching database versions, newly dropped tables would remain within MySQL.  
+ * This ensures a clean restore.  Should always be done before restoring a production
+ * databases.
+ */
+
+foreach($tables_preserved_prod_sequences as $preserved_data) {
+  $filter .= "|grep -v 'DROP TABLE IF EXISTS .$preserved_data.;'";
+}
+
+$dump_options = "--add-drop-table --no-data";
+
+exec("mysqldump $dump_options $db_connection_settings | grep 'DROP TABLE' $filter | mysql $db_connection_settings");
+
+print("Database erased.\n");
+
