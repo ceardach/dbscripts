@@ -1,0 +1,61 @@
+#!/usr/local/bin/php
+<?php
+require('db_settings.inc');
+
+if (option('help')) {
+  echo <<<EOF
+
+Erase your MySQL database to better prepare it for restoring.
+
+Usage: $file_path/erase_database [OPTIONS]
+Example: $file_path/erase_database --none
+
+All arguments are long options.
+
+  --help       This page.
+
+  --full       Only erase tables that aren't set for full preservation (as set in the 
+               config.inc file).  This is the default option.
+
+  --min        Erase all but a minimal few tables (as set in the config.inc file).
+
+  --none       Erase the entire database.
+
+  --sequences  Ensure that sequences don't get erased.
+
+\n
+EOF;
+  exit;
+}
+
+if (option('none')) {
+  $filter_mode = 'none';
+} elseif (option('min')) {
+  $filter_mode = 'min';
+}
+
+switch($filter_mode){
+  case 'none':
+    $filter = option('sequences')? "|grep -v 'DROP TABLE IF EXISTS .sequences.;'" : '';
+    $message = "Erased the entire database.";
+    break;
+
+  case 'min':
+    $tables_preserved_min[] = option('sequences') ? 'sequences' : '';
+    foreach($tables_preserved_min as $preserved_data) {
+      $filter .= "|grep -v 'DROP TABLE IF EXISTS .$preserved_data.;'";
+    }
+    $message = "Erased the database, except for minimal preserved tables.";
+
+  default:
+    $tables_preserved_full[] = option('sequences') ? 'sequences' : '';
+    foreach($tables_preserved_full as $preserved_data) {
+      $filter .= "|grep -v 'DROP TABLE IF EXISTS .$preserved_data.;'";
+    }
+    $message = "Erased the database, except for preserved tables.";
+    break;
+}
+
+$dump_options = "--add-drop-table --no-data";
+exec("mysqldump $dump_options $db_connection_settings | grep 'DROP TABLE' $filter | mysql $db_connection_settings");
+print("\n$message\n\n");

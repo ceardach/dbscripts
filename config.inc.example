@@ -2,14 +2,18 @@
 
 /**
  * Path Settings
+ *   - Relative path from where you would be running the scripts
+ *   - Use trailing slashes
  */
 
-// Relative path from where you would be running this script to the dbscripts folder
-$path = './';
+// Location of dbscripts folder
+$script_path = './dbscripts/';
 
-// Relative path from where you would be running this script to settings.php
-$settings_path = 'sites/default';
+// Location of settings.php
+$settings_path = './sites/default/';
 
+// Location where database dump files will be stored
+$file_path = './dbscripts/databases/';
 
 
 /**
@@ -23,23 +27,17 @@ $dbtype = 'mysql';
  * Arrays of tables to dictate how each of their data should be manipulated
  */
 
-// Tables filtered and not stored
+// Tables to be filtered and not stored
 
-$tables_filtered_dev =  array(
-  'cache',
-  'cache_.*',
-);
-
-$tables_filtered_prod =  array(
+$tables_filtered =  array(
   'cache',
   'cache_.*',
 );
 
 
+// Tables to be filtered and not stored, but preserved in the working space
 
-// Tables filtered and not stored, but preserved in the working space
-
-$tables_preserved_dev =  array(
+$tables_preserved_full =  array(
   'accesslog',
   'comments',
   'forward_log',
@@ -58,13 +56,8 @@ $tables_preserved_dev =  array(
   'watchdog',
 );
 
-$tables_preserved_prod = array(
+$tables_preserved_min = array(
   'sessions',
-);
-
-$tables_preserved_prod_sequences = array(
-  'sessions',
-  'sequences',
 );
 
 

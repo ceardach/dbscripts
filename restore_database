@@ -1,0 +1,87 @@
+#!/usr/local/bin/php
+<?php
+require('db_settings.inc');
+
+if (option('help')) {
+  echo <<<EOF
+
+Erase your MySQL database to better prepare it for restoring.
+
+Usage: $file_path/erase_database [OPTIONS]
+Example: $file_path/erase_database --prod --min
+
+All arguments are long options.
+
+  --help       This page.
+
+  --dev        Restores development.sql to the MySQL database. This is the default option.
+
+  --prod       Restores production.sql to the MySQL database.
+
+  --lastmerge  Restores last-merge.sql to the MySQL database.
+
+  --full       The full options of tables currently in MySQL will attempt to be 
+               preserved (as set in config.inc).  This is the default option.
+
+  --min        The minimum options of tables currently in MySQL will attempt to be 
+               preserved (as set in config.inc).
+
+  --none       No tables tables will be preserved, providing only a full restore.
+
+  --sequences  Don't overwrite the sequences table currently in the MySQL database.
+
+\n
+EOF;
+  exit;
+}
+
+
+// Set file to be restored
+if (option('prod')) {
+  $file = 'production.sql';
+} elseif (option('lastmerge')) {
+  $file = 'last-merge.sql';
+} else {
+  $file = 'development.sql';
+}
+
+// Set filtering option
+if (option('none')) {
+  $filter_mode = 'none';
+} elseif (option('min')) {
+  $filter_mode = 'min';
+}
+
+// Set sequences setting
+if (option('sequences')) {
+  $sequences = '--sequences';
+  $message_sequences = 'and preserved sequences';
+
+  // Create a temp file with sequences striped out
+  exec("grep -v 'DROP TABLE IF EXISTS .sequences.;' $file_path/$file |sed 's/CREATE TABLE .sequences./CREATE TABLE IF NOT EXISTS `sequences`/g' |grep -v 'INSERT INTO .sequences. VALUES' > $file_path/tmp/database.tmp");
+  $file = '/tmp/database.tmp';
+}
+
+switch($filter_mode){
+  case 'none':
+    exec("$script_path/erase_database --none $sequences");
+    $message = "Restored the full database $sequences";
+    break;
+
+  case 'min':
+    exec("$script_path/erase_database --min $sequences");
+    $message = "Restored the database perserving minimal tables $sequences";
+
+  default:
+    exec("$script_path/erase_database $sequences");
+    $message = "Restored the database preserving the full option of tables $sequences";
+    break;
+}
+
+exec("mysql $db_connection_settings < $file_path/$file");
+
+if (option('sequences')) {
+  exec("rm $file_path/tmp/database.tmp");
+}
+
+print("\n$message\n\n");

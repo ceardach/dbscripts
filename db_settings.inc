@@ -1,6 +1,6 @@
 <?php
 require('config.inc');
-require($settings_path.'/settings.php');
+require("$settings_path/settings.php");
 
 function get_db_settings() {
   global $db_url;
@@ -16,3 +16,11 @@ $dbhost = $dbsettings[3];
 $dbname = $dbsettings[4];
 
 $db_connection_settings = "-u $dbuser -p$dbpassword -h $dbhost $dbname";
+
+function option($flag){
+  if (in_array('--'.$flag, $_SERVER['argv'])) {
+    return TRUE;
+  } else {
+    return FALSE;
+  }
+}
