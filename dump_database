@@ -7,8 +7,8 @@ if (option('help')) {
 
 Perform a database dump.
 
-Usage: $script_path/dump_database [OPTIONS]
-Example: $script_path/dump_database --prod --min
+Usage: {$script_path}dump_database [OPTIONS]
+Example: {$script_path}dump_database --prod --min
 
 All arguments are long options.
 

@@ -2,6 +2,22 @@
 <?php
 require('db_settings.inc');
 
+if (option('help')) {
+  echo <<<EOF
+
+Merge a development and production database together.
+
+Usage: {$script_path}merge_databases
+
+Result: {$file_path}development.sql and {$file_path}production.sql will be merged.
+
+\n
+EOF;
+  exit;
+}
+
+
+
 /**
  * If this script is being run after a conflict, the temp files would still exist.
  * Deleting all temp files if this script is run after a conflict.

@@ -7,8 +7,8 @@ if (option('help')) {
 
 Erase your MySQL database to better prepare it for restoring.
 
-Usage: $file_path/erase_database [OPTIONS]
-Example: $file_path/erase_database --none
+Usage: {$script_path}erase_database [OPTIONS]
+Example: {$script_path}erase_database --none
 
 All arguments are long options.
 
