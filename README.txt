@@ -1,16 +1,38 @@
 QUICK START GUIDE
 
-1) enter these in the command line:
+  1. Place the dbscripts folder wherever you would wish.  It is recomended to not put it in your web root.
 
-cp dbscripts/config.inc.example dbscripts/config.inc
-cp dbscripts/PostMergeInstructions.txt.example dbscripts/PostMergeInstructions.txt
+  2. Create the folder database dumps will save to.
 
-2) Configure config.inc to your needs, especially the relative paths
+  3. Copy config.inc.example and PostMergeInstructions.txt.example preserving their filenames and removing ".example".  Configure them as needed.
+
+  4. If you are using CCK and wish to merge schema changes:
+
+    i. Within your Drupal website, enable the content_copy module and export all of your content types.  Save the export data in files.
+
+    ii. Apply the patch for content_copy to allow modifying existing fields
 
 
-WARNING: 
+USAGE
 
-Merged databases should only be performed on stable and secure versions ready for 
+Dumping the database:
+  Development: ./dbscripts/dump_database
+  Production: ./dbscripts/dump_database --prod --min
+
+Restoring a database file:
+  Development: ./dbscripts/restore_database
+  Production: ./dbscripts/restore_database --prod --min
+
+Merging the databases:
+  First bring last-merge.sql and production.sql to the same schema as development.sql
+  ./dbscripts/merge_databases
+
+Use --help for more information
+
+
+MERGING DATABASES 
+
+Warning:  Merged databases should only be performed on stable and secure versions ready for 
 public consumption!
 
 MERGING CONCEPT: 
@@ -22,9 +44,9 @@ production have the power to create, delete and modify content, the last-merge d
 serves as a starting point to compare with so the difference between an addition and 
 a subtraction can be tracked.
 
-This script assumes that production database will only track content and users.  
+This script assumes the production database will only track content and users.  
 Other changes made and stored in the production database will be lost.  Additionally, 
-users and user data is not preserved in development after a merge.
+user data is not preserved in development after a merge.
 
 Manually, the developer will first bring the merged and production databases to 
 have the same structure as the development database (for the data we're concerned 
@@ -40,31 +62,60 @@ Diff3 is run on the three versions creating a newly merged data set.  That data 
 then appended to the end of the database structure skeleton. 
 
 Finally, to have all data in the right spot and ordered in the right way in the 
-dump files (so a proper svn diff can be created), the databases are restored and 
-dumped again.  
+dump files (so a proper difference can be created for version control), the databases 
+are restored and dumped again.  
 
-Finally, the production database is loaded into MySQL by the end of this script.  
-That version should be tested thoroughly.
+The production database is loaded into MySQL by the end of this script. That version 
+should be tested thoroughly.
 
 
 NOTE: To ensure there is no conflict between development database and production 
       database, the table structures must be the same for all three databases 
       first.  To do this, follow these steps:
+
+        NOTE: Perform these steps in a staging area!
+
         1) SVN update all files
-        2) Restore the last-merge database
+        2) Restore the last-merge database: ./dbscripts/restore_database --last-merge --min
         3) Run update.php as needed
         4) Import content_type data as needed
-        5) Dump as development database
-        6) Copy development database to last-merge
-        7) SVN revert development database
-        7) Repeat steps 2-4 for the production database
-        8) Dump as production database
+        5) Dump database: ./dbscripts/dump_database --last-merge
+        6) Restore the last-merge database: ./dbscripts/restore_database --prod --min
+        7) Repeat steps 3 & 4 for the production database
+        8) Dump database: ./dbscripts/dump_database --prod --min
         9) Run the merge script
         10) Test, test, test, then test some more
         11) Commit
 
 WARNING: When merging development and production databases, the development will 
-         lose all user data.  Also keep aware it merges ALL nodes, so nodes
-         created for testing purposes should first be deleted or unpublished
-         before merging the databases.
+         lose all user data and be replaced with production user data.  Also keep 
+         aware it merges ALL nodes, so nodes created for testing purposes should 
+         first be deleted or unpublished before merging the databases.
 
+MERGE CONFLICTS:
+
+Conflicts can happen, and the script will catch it allow you to resolve the 
+conflicts manually.  The most frequent causes of conflicts are:
+
+  * Editing the same peice of content on both development and production.  Just try 
+    not to do that.  To gracfually resolve that issue, though, keep revisions enabled 
+    and install the diff module.  During conflict resolution you will only have to pick 
+    which revision to use in the node table - both revisions will be preserved, it's 
+    just choosing which one will be visible.  Then you can go in and see the conflicts 
+    using the diff module between the two revisions.
+
+  * Scaling issues.  Changes to the same area (such as new nodes) in both versions in 
+    which at least one version had a lot of changes.  Apparently, Diff will only 
+    figure it out so much, and then just gives up and declares it a conflict.  Normally 
+    it's just a matter of removing the conflict markers.
+
+  * Upgrading the schema incorrectly.  If there are A LOT of conflicts, it's probably 
+    a schema issue.  Ensure that you performed the schema synching correctly and that 
+    each column is in the correct order.
+
+Perform test merges frequently so you'll be kept informed of any issues as they come up.  
+
+Use the PostMergeInstructions.txt file to track what actions need to be performed 
+after merging.  Example:  You added a new CCK field, and then have to enable a setting 
+in a node that was added during the production branch.  Or, you edited the same node on 
+both development and production and you note it needs to be manually resolved.
