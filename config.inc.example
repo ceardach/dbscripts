@@ -3,17 +3,23 @@
 /**
  * Path Settings
  *   - Relative path from where you would be running the scripts
- *   - Use trailing slashes
+       (assumed to be your version control root, which may or may not differ from
+       your web root)
+ *   - Do not use trailing slashes
  */
 
 // Location of dbscripts folder
-$script_path = './dbscripts/';
+$script_path = './dbscripts';
 
 // Location of settings.php
-$settings_path = './sites/default/';
+$settings_path = './sites/default';
 
 // Location where database dump files will be stored
-$file_path = './dbscripts/databases/';
+$file_path = './databases';
+
+// Location of mysql binaries (needs to be set if not in your path)
+$mysql = 'mysql';
+$mysqldump = 'mysqldump';
 
 
 /**
@@ -28,7 +34,7 @@ $dbtype = 'mysql';
  */
 
 // Tables to be filtered and not stored
-
+// These tables are always used except when 'none' filtering option is used
 $tables_filtered =  array(
   'cache',
   'cache_.*',
@@ -36,7 +42,7 @@ $tables_filtered =  array(
 
 
 // Tables to be filtered and not stored, but preserved in the working space
-
+// Tables for 'full' filtering option
 $tables_preserved_full =  array(
   'accesslog',
   'comments',
@@ -44,6 +50,7 @@ $tables_preserved_full =  array(
   'forward_statistics',
   'flood',
   'history',
+  'mollom',
   'node_comment_statistics',
   'node_counter',
   'search_dataset',
@@ -56,13 +63,13 @@ $tables_preserved_full =  array(
   'watchdog',
 );
 
+// Tables for 'min' filtering option
 $tables_preserved_min = array(
   'sessions',
 );
 
 
 // Tables that contain content to be merged
-
 $tables_content = array(
   'authmap',
   'content_field_.*', 
@@ -97,7 +104,6 @@ $tables_content = array(
 
 
 // Tables that contain user data and user tracking
-
 $tables_users = array(
   'accesslog',
   'comments',
@@ -105,6 +111,7 @@ $tables_users = array(
   'forward_statistics',
   'flood',
   'history',
+  'mollom',
   'node_comment_statistics',
   'node_counter',
   'profile_values',
@@ -120,14 +127,13 @@ $tables_users = array(
 
 
 // Tables with autoincrement that will have their sequences stripped
-
 $tables_increment = array(
   'url_alias',
 );
 
 
 // SQL comments that should not be unset
-
+// you probably don't need to edit this
 $sql_comment_unset = array(
   '..!40103 SET TIME_ZONE=@OLD_TIME_ZONE ..;',
   '..!40101 SET SQL_MODE=@OLD_SQL_MODE ..;',
