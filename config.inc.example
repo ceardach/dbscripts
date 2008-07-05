@@ -21,6 +21,9 @@ $file_path = './databases';
 $mysql = 'mysql';
 $mysqldump = 'mysqldump';
 
+// Charset location
+$charsets = '/usr/local/share/mysql/charsets';
+
 
 /**
  * Database type (mysql, mysqli)

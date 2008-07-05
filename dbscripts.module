@@ -391,7 +391,7 @@ function dbscripts_dump($file = 'development', $filter_option = 'full') {
     }
 
     // These are all the special dump options that make the database diffable
-    $dump_options = "--skip-opt --add-drop-table --add-locks --create-options --quick --lock-tables --set-charset --disable-keys --order-by-primary --comments=FALSE --default-character-set=utf8 --hex-blob";
+    $dump_options = "--skip-opt --add-drop-table --add-locks --create-options --quick --lock-tables --set-charset --disable-keys --order-by-primary --comments=FALSE --default-character-set=utf8 --character-sets-dir=$charsets --hex-blob";
 
     // and finally, lets dump the database to the given file, and let the user 
     // know what happened
