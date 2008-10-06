@@ -362,6 +362,11 @@ function dbscripts_dump($file = 'development', $filter_option = 'full') {
 
   // Set the file to dump to
   $dump_file = $file.'.sql';
+  
+  // Create the dump location if it doesn't exist
+  if(!file_exists($file_path)) {
+    exec("mkdir $file_path");
+  }
 
   // Set the filtering options and message to be presented to the user
   switch($filter_option){
@@ -493,8 +498,13 @@ function dbscripts_restore($file = 'development', $filter_option = 'full', $sequ
   
   $db_connection_settings = dbscripts_db_connect();
 
-  // Set the file to dump to
+  // Set the file to restore from
   $dump_file = $file.'.sql';
+  
+  // Check that the requested file exists
+  if (!file_exists($file_path.'/'.$file)) {
+    return "\nThe file does not exist: $file_path/$dump_file\n\n";
+  }
 
   // If sequences need to be restored, we have to create a temp file
   $sequences_message = '';
@@ -565,6 +575,28 @@ function dbscripts_merge($dev_db = 'development', $lastmerge_db = 'last-merge', 
   }
   if (!$prod_db) {
     $prod_db = 'production';
+  }
+  
+  // Ensure all the files exist
+  $missing_db = '';
+  if (!file_exists("$file_path/$dev_db.sql")) {
+    $missing_db .= $dev_db.'.sql ';
+  }
+  if (!file_exists("$file_path/$lastmerge_db.sql")) {
+    $missing_db .= $lastmerge_db.'.sql ';
+  }
+  if (!file_exists("$file_path/$prod_db.sql")) {
+    $missing_db .= $prod_db.'.sql ';
+  }
+  
+  // Cancel merge if all files do not exist
+  if ($missing_db) {
+    return "\nMissing database files for merge: $missing_db\n\n";
+  }
+  
+  // Ensure tmp folder exists
+  if (!file_exists($file_path.'/tmp')) {
+    exec("mkdir $file_path/tmp");
   }
   
   // After a conflict, the temp files would still exist
