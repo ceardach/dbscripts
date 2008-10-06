@@ -1,0 +1,60 @@
+--- cck/content_copy.module	2008-07-23 14:07:28.000000000 -0400
++++ content_modify/content_copy.module	2008-09-18 13:45:36.000000000 -0400
+@@ -363,6 +363,19 @@ function content_copy_import_form_submit
+     // Reset the static variable in fieldgroup_groups() with new data.
+     fieldgroup_groups('', FALSE, TRUE);
+   }
++  
++  // EDIT: Delete any fields not in the import
++  $existing_fields = $content_info['content types'][$type_name]['fields'];
++  $imported_field_names = array();
++  foreach($imported_fields as $field) {
++    $imported_field_names[] = $field['field_name'];
++  }
++  foreach ($existing_fields as $field) {
++    if (!in_array($field['field_name'], $imported_field_names)) {
++      drupal_execute('_content_admin_field_remove', $field, $type_name, $field['field_name']);
++    }
++  }
++  // END EDIT
+ 
+   $should_clear_type_cache = 0;
+   // Iterate through the field forms in the import and execute each.
+@@ -370,16 +383,20 @@ function content_copy_import_form_submit
+ 
+     // Make sure the field doesn't already exist in the type.
+     // If so, do nothing, fields can't be duplicated within a content type.
++    // EDIT: By passing check, fields won't be duplicated, but rather modified
+     $field_name   = $field['field_name'];
+     $field_values = $field;
+     $field_label  = $field_values['label'];
+ 
+     if (!empty($field['field_name']) && is_array($content_info['content types'][$type_name]['fields'][$field_name])) {
++      // EDIT: removing set message and passing field on to be modified
++      /*
+       drupal_set_message(t("The imported field %field_label (%field_name) was not added to %type because that field already exists in %type.", array(
+           '%field_label' => $field_label,
+           '%field_name' => $field_name,
+           '%type' => $type_name
+           )));
++      */
+     }
+     else {
+ 
+@@ -422,6 +439,7 @@ function content_copy_import_form_submit
+           $errors = TRUE;
+         }
+       }
++    } // EDIT: Close "else" here so existing fields become modified
+ 
+       // Once the field has been added, update the settings with the macro values.
+       // Replace the export type name with the import type name.
+@@ -457,7 +475,7 @@ function content_copy_import_form_submit
+           }
+         }
+       }
+-    }
++    //} EDIT: relocate closing "else" away from here (see previous EDIT)
+   }
+ 
+   // If no errors occured when inserting field data directly into the DB,
