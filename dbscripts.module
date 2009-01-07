@@ -1,6 +1,24 @@
 <?php
 
 /**
+  Dump each table's schema as a file (table_name_schema)
+  Dump each table's data as a file (table_name_data)
+  Have flag to dump as single file, or restore from single file
+  
+  Have a config setting to store sequences seperately by user
+  Grab sequences as last line of file?
+  Check if table auto increments next highest
+  
+  Merge by copying schema and data files for non-merge content
+  Merge content as normal
+  Restore&Dump only modified/merged tables
+    check diff, and flag to be restored and dumped
+    (Double check if this is still nessisary if data files are seperate)
+  
+  Have script to complete merge process after conflict (merge.php finish)
+**/
+
+/**
  * Get the database connection settings from settings.php file
  */
 function dbscripts_db_connect() {
@@ -500,7 +518,7 @@ function dbscripts_restore($file = 'development', $filter_option = 'full', $sequ
 
   // Set the file to restore from
   $dump_file = $file.'.sql';
-  
+
   // Check that the requested file exists
   if (!file_exists($file_path.'/'.$file)) {
     return "\nThe file does not exist: $file_path/$dump_file\n\n";
