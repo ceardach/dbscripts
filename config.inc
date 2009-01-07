@@ -41,97 +41,140 @@ $dbtype = 'mysqli';
 $tables_filtered =  array(
   'cache',
   'cache_.*',
+  'views_object_cache',
+  'votingapi_cache',
 );
 
 
 // Tables to be filtered and not stored, but preserved in the working space
 // Tables for 'full' filtering option
-$tables_preserved_full =  array(
+$tables_filtered_full =  array(
   'accesslog',
+  'aggregator_item',
+  'aggregator_category_item',
   'comments',
-  'forward_log',
-  'forward_statistics',
+  'node_comment_statistics',
+  'fivestar_comment',
   'flood',
   'history',
   'mollom',
   'node_comment_statistics',
   'node_counter',
+  'poll_votes',
   'search_dataset',
   'search_index',
+  'search_node_links',
   'search_total',
-  'send',
-  'send_recipient',
-  'sessions',
-  'views_audit',
+  'votingapi_vote',
   'watchdog',
 );
 
 // Tables for 'min' filtering option
-$tables_preserved_min = array(
+$tables_filtered_min = array(
   'sessions',
+  'openid_association',
 );
 
 
 // Tables that contain content to be merged
-$tables_content = array(
+$tables_merge = array(
+  'aggregator_category',
+  'aggregator_category_feed',
+  'aggregator_feed',
   'authmap',
+  'blogapi_files',
+  'book',
   'content_field_.*', 
   'content_type_.*', 
   'files',
-  'file_revisions',
+  'forum',
   'image',
+  'image_attach',
   'img_assist_map',
-  'menu',
+  'menu_links',
   'node',
   'node_access',
   'node_revisions',
-  'nodewords',
-  'path_redirect',
-  'search_block',
-  'send_setting',
-  'slideshow',
+  'profile_values',
+  'poll',
+  'poll_choices',
   'term_data',
   'term_hierarchy',
   'term_node',
   'term_relation',
   'term_synonym',
+  'upload',
   'url_alias',
-  'webfm_attach',
-  'webfm_file',
-  'workflow_node',
-  'workflow_node_history',
-  'workflow_scheduled_transition',
-  'xmlsitemap_node',
-  'xmlsitemap_term',
+  'vocabulary',
+  'vocabulary_node_types',
+  'webform_submissions',
+  'webform_submitted_data',
 );
 
 
 // Tables that contain user data and user tracking
-$tables_users = array(
+// This data will override any data made during development
+$tables_override = array(
   'accesslog',
+  'aggregator_item',
+  'aggregator_category_item',
   'comments',
-  'forward_log',
-  'forward_statistics',
+  'comment_notify',
+  'fivestar_comment',
   'flood',
   'history',
   'mollom',
-  'node_comment_statistics',
   'node_counter',
+  'node_comment_statistics',
+  'poll_votes',
   'profile_values',
   'search_dataset',
   'search_index',
+  'search_node_links',
   'search_total',
-  'send',
-  'send_recipient',
+  'sessions',
   'users',
   'users_roles',
+  'votingapi_vote',
   'watchdog',
 );
 
-
-// Tables with autoincrement that will have their sequences stripped
-$tables_increment = array(
-  'url_alias',
+// Tables used for everything else.  Just here for the sake of recording it.
+$tables_structure = array(
+  'access',
+  'actions',
+  'actions_aid',
+  'advanced_help_index',
+  'batch',
+  'blocks',
+  'blocks_roles',
+  'boxes',
+  'contact',
+  'content_group',
+  'content_group_fields',
+  'content_node_field',
+  'content_node_field_instance',
+  'filters',
+  'filter_formats',
+  'imagecache_action',
+  'imagecache_preset',
+  'languages',
+  'locales_source',
+  'locales_target',
+  'menu_custom',
+  'menu_router',
+  'node_type',
+  'permission',
+  'profile_fields',
+  'role',
+  'system',
+  'trigger_assignments',
+  'variable',
+  'views_display',
+  'views_view',
+  'webform',
+  'webform_component',
+  'webform_roles',
 );
 
 
