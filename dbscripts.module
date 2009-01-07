@@ -1,6 +1,8 @@
 <?php
 
 /**
+  TODO
+  
   Dump each table's schema as a file (table_name_schema)
   Dump each table's data as a file (table_name_data)
   Have flag to dump as single file, or restore from single file
@@ -27,12 +29,17 @@ function dbscripts_db_connect() {
   
   preg_match('/'.$dbtype.':\/\/([^:]+):([^@]+)@([^\/]+)\/(.+)/', $db_url, $db_settings);
 
-  $dbuser = $db_settings[1];
-  $dbpassword = $db_settings[2];
-  $dbhost = $db_settings[3];
-  $dbname = $db_settings[4];
+  if (empty($db_settings)) {
+    return FALSE;
+  } else {
 
-  return "-u $dbuser -p$dbpassword -h $dbhost $dbname";
+    $dbuser = $db_settings[1];
+    $dbpassword = $db_settings[2];
+    $dbhost = $db_settings[3];
+    $dbname = $db_settings[4];
+
+    return "-u $dbuser -p$dbpassword -h $dbhost $dbname";
+  }
 }
 
 
@@ -377,6 +384,10 @@ function dbscripts_dump($file = 'development', $filter_option = 'full') {
   require('config.inc');
   
   $db_connection_settings = dbscripts_db_connect();
+  if (!$db_connection_settings) {
+    return "\nImproper database connection settings.\n\n";
+    exit;
+  }
 
   // Set the file to dump to
   $dump_file = $file.'.sql';
@@ -419,10 +430,18 @@ function dbscripts_dump($file = 'development', $filter_option = 'full') {
   // These are all the special dump options that make the database diffable
   $dump_options = "--skip-opt --add-drop-table --add-locks --create-options --quick --lock-tables --set-charset --disable-keys --order-by-primary --comments=FALSE --default-character-set=utf8 --character-sets-dir=$charsets --hex-blob";
 
-  // and finally, lets dump the database to the given file, and let the user 
-  // know what happened
-  exec("$mysqldump $dump_options $db_connection_settings $filter > $file_path/$dump_file");
+  // and finally, lets dump the database to a temporary file
+  exec("$mysqldump $dump_options $db_connection_settings $filter > $file_path/temp");
 
+  // check that the file actually has data
+  if (file_get_contents("$file_path/temp") == '') {
+    $message = "Empty data returned.  There may be a problem connecting to the database.";
+    exec("rm $file_path/temp");
+  } else {
+    exec("mv $file_path/temp $file_path/$dump_file");
+  }
+
+  // let the user know what happened
   return "\n$message\n\n";
 }
 
@@ -450,6 +469,10 @@ function dbscripts_erase($filter_option = 'full', $sequences = FALSE) {
   require('config.inc');
   
   $db_connection_settings = dbscripts_db_connect();
+  if (!$db_connection_settings) {
+    return "\nImproper database connection settings.\n\n";
+    exit;
+  }
 
   // Set the filtering options and message to be presented to the user
   switch ($filter_option) {
@@ -515,6 +538,10 @@ function dbscripts_restore($file = 'development', $filter_option = 'full', $sequ
   require('config.inc');
   
   $db_connection_settings = dbscripts_db_connect();
+  if (!$db_connection_settings) {
+    return "\nImproper database connection settings.\n\n";
+    exit;
+  }
 
   // Set the file to restore from
   $dump_file = $file.'.sql';

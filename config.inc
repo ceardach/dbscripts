@@ -28,7 +28,7 @@ $charsets = '/usr/local/share/mysql/charsets';
 /**
  * Database type (mysql, mysqli)
  */
-$dbtype = 'mysql';
+$dbtype = 'mysqli';
 
 
 
