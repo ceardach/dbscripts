@@ -400,31 +400,30 @@ function dbscripts_dump($file = 'development', $filter_option = 'full') {
   // Set the filtering options and message to be presented to the user
   switch($filter_option){
     case 'none':
-      $filter = '';
+      $tables_trashed = array();
+      $tables_preserved = array();
       $message = "Performed a full database dump to $dump_file.";
       break;
 
     case 'min':
-      $filter = '';
-      foreach($tables_filtered as $filtered_data) {
-        $filter .= "|grep -v 'INSERT INTO .".$filtered_data.".' ";
-      }
-      foreach($tables_preserved_min as $preserved_data) {
-        $filter .= "|grep -v 'DROP TABLE IF EXISTS .".$preserved_data.".;' |sed 's/CREATE TABLE .".$preserved_data."./CREATE TABLE IF NOT EXISTS `".$preserved_data."`/g' |grep -v 'INSERT INTO .".$preserved_data.".' ";
-      }
+      $tables_trashed = $tables_filtered;
+      $tables_preserved = $tables_filtered_l1;
       $message = "Dumped the database to $file with minimal filtering.";
       break;
 
     default:
-      $filter = '';
-      foreach($tables_filtered as $filtered_data) {
-        $filter .= "|grep -v 'INSERT INTO .".$filtered_data.".' ";
-      }
-      foreach($tables_preserved_full as $preserved_data) {
-        $filter .= "|grep -v 'DROP TABLE IF EXISTS .".$preserved_data.".;' |sed 's/CREATE TABLE .".$preserved_data.". (/CREATE TABLE IF NOT EXISTS `".$preserved_data."` (/g' |grep -v 'INSERT INTO .".$preserved_data.". VALUES' ";
-      }
+      $tables_trashed = $tables_filtered;
+      $tables_preserved = array_merge($tables_filtered_l1,$tables_filtered_l2);
       $message = "Dumped the database to $file with full filtering options.";
       break;
+  }
+  
+  $filter = '';
+  foreach($tables_trashed as $filtered_data) {
+    $filter .= "|grep -v 'INSERT INTO .".$filtered_data.".' ";
+  }
+  foreach($tables_preserved as $preserved_data) {
+    $filter .= "|grep -v 'DROP TABLE IF EXISTS .".$preserved_data.".;' |sed 's/CREATE TABLE .".$preserved_data."./CREATE TABLE IF NOT EXISTS `".$preserved_data."`/g' |grep -v 'INSERT INTO .".$preserved_data.".' ";
   }
 
   // These are all the special dump options that make the database diffable
@@ -477,27 +476,27 @@ function dbscripts_erase($filter_option = 'full', $sequences = FALSE) {
   // Set the filtering options and message to be presented to the user
   switch ($filter_option) {
     case 'min':
-      $filter = '';
-      $tables_preserved_min[] = $sequences ? 'sequences' : '';
-      foreach($tables_preserved_min as $preserved_data) {
-        $filter .= "|grep -v 'DROP TABLE IF EXISTS .$preserved_data.;'";
-      }
+      $tables_preserved = $tables_filtered_l1;
       $message = "Erased the database, except for minimal preserved tables.";
       break;
 
     case 'none';
-      $filter = $sequences ? "|grep -v 'DROP TABLE IF EXISTS .sequences.;'" : '';
+      $tables_preserved = array();
       $message = "Erased the entire database.";
       break;
 
     default:
-      $filter = '';
-      $tables_preserved_full[] = $sequences ? 'sequences' : '';
-      foreach($tables_preserved_full as $preserved_data) {
-        $filter .= "|grep -v 'DROP TABLE IF EXISTS .$preserved_data.;'";
-      }
+      $tables_preserved = array_merge($tables_filtered_l1,$tables_filtered_l2);
       $message = "Erased the database, except for preserved tables.";
       break;
+  }
+
+  $filter = '';
+  if ($sequences) {
+    $tables_preserved[] = 'sequences';
+  }
+  foreach($tables_preserved as $preserved_data) {
+    $filter .= "|grep -v 'DROP TABLE IF EXISTS .$preserved_data.;'";
   }
 
   // Dump options to make it easy to erase the database
@@ -547,7 +546,7 @@ function dbscripts_restore($file = 'development', $filter_option = 'full', $sequ
   $dump_file = $file.'.sql';
 
   // Check that the requested file exists
-  if (!file_exists($file_path.'/'.$file)) {
+  if (!file_exists("$file_path/$dump_file")) {
     return "\nThe file does not exist: $file_path/$dump_file\n\n";
   }
 
@@ -660,19 +659,13 @@ function dbscripts_merge($dev_db = 'development', $lastmerge_db = 'last-merge', 
   print " Done.";
 
   //Set up ability to strip data from tables
-  $strip_content = '';
-  foreach($tables_content as $content_table){ 
-    $strip_content .= "|grep -v 'INSERT INTO .".$content_table.". VALUES' ";
+  $strip_merge = '';
+  foreach($tables_merge as $table){ 
+    $strip_content .= "|grep -v 'INSERT INTO .".$table.". VALUES' ";
   }
-  $strip_users = '';
-  foreach($tables_users as $users_table){ 
-    $strip_users .= "|grep -v 'INSERT INTO .".$users_table.". VALUES' "; 
-  }
-
-  // Set up ability to strip primary keys from incremental tables
-  $strip_increment = '';
-  foreach($tables_increment as $increment_table){ 
-    $strip_increment .= "| sed 's/INSERT INTO .".$increment_table.". VALUES ([0-9][0-9]*,/INSERT INTO `".$increment_table."` VALUES (NULL,/g' "; 
+  $strip_override = '';
+  foreach($tables_override as $table){ 
+    $strip_users .= "|grep -v 'INSERT INTO .".$table.". VALUES' "; 
   }
 
   // Set up ability to strip SQL comments
@@ -685,7 +678,8 @@ function dbscripts_merge($dev_db = 'development', $lastmerge_db = 'last-merge', 
   // correctly, tables that were modified to not be dropped in development, 
   // need to be reversed
   $reverse_filter = '';
-  foreach($tables_preserved_full as $table) {
+  $tables_preserved = array_merge($tables_filtered_l1,$tables_filtered_l2);
+  foreach($tables_preserved as $table) {
     $reverse_filter .= "|sed 's/CREATE TABLE IF NOT EXISTS .".$table.". (/DROP TABLE IF EXISTS `".$table."`; CREATE TABLE `".$table."` (/g' ";
   }
 
@@ -693,7 +687,7 @@ function dbscripts_merge($dev_db = 'development', $lastmerge_db = 'last-merge', 
 
   // Take development database and strip it of content and user data to 
   // create a skeleton to work from (skeleton.sql)
-  exec("cat $file_path/$dev_db.sql $strip_content $strip_users $strip_comment $reverse_filter > $file_path/tmp/skeleton.sql");
+  exec("cat $file_path/$dev_db.sql $strip_merge $strip_override $strip_comment $reverse_filter > $file_path/tmp/skeleton.sql");
   print "."; // ghetto status indicators
 
   // copy skeleton to where we'll be building the newly merged database
@@ -701,8 +695,8 @@ function dbscripts_merge($dev_db = 'development', $lastmerge_db = 'last-merge', 
   print ".";
 
   //Add production user data to start building the newly merged database
-  foreach($tables_users as $user_table){
-    exec("grep 'INSERT INTO .".$user_table.". VALUES' $file_path/$prod_db.sql >> $file_path/tmp/data_user.sql");
+  foreach($tables_override as $table){
+    exec("grep 'INSERT INTO .".$table.". VALUES' $file_path/$prod_db.sql >> $file_path/tmp/data_user.sql");
     print ".";
   }
   exec("cat $file_path/tmp/data_user.sql >> $file_path/tmp/merged_database.sql");
@@ -714,12 +708,12 @@ function dbscripts_merge($dev_db = 'development', $lastmerge_db = 'last-merge', 
   if(file_exists("$file_path/tmp/data_prod.sql")){ exec("rm $file_path/tmp/data_prod.sql"); }
   if(file_exists("$file_path/tmp/data_lastmerge.sql")){ exec("rm $file_path/tmp/data_lastmerge.sql"); }
 
-  foreach($tables_content as $content_table){
-    exec("grep 'INSERT INTO .".$content_table.". VALUES' $file_path/$dev_db.sql $strip_increment >> $file_path/tmp/data_dev.sql");
+  foreach($tables_merge as $table){
+    exec("grep 'INSERT INTO .".$table.". VALUES' $file_path/$dev_db.sql $strip_increment >> $file_path/tmp/data_dev.sql");
     print ".";
-    exec("grep 'INSERT INTO .".$content_table.". VALUES' $file_path/$prod_db.sql $strip_increment >> $file_path/tmp/data_prod.sql");
+    exec("grep 'INSERT INTO .".$table.". VALUES' $file_path/$prod_db.sql $strip_increment >> $file_path/tmp/data_prod.sql");
     print ".";
-    exec("grep 'INSERT INTO .".$content_table.". VALUES' $file_path/$lastmerge_db.sql $strip_increment >> $file_path/tmp/data_lastmerge.sql");
+    exec("grep 'INSERT INTO .".$table.". VALUES' $file_path/$lastmerge_db.sql $strip_increment >> $file_path/tmp/data_lastmerge.sql");
     print ".";
   }
 

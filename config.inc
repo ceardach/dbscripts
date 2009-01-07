@@ -33,11 +33,12 @@ $dbtype = 'mysqli';
 
 
 /**
- * Arrays of tables to dictate how each of their data should be manipulated
+ * Filtered tables
+ * Some data is not nessisary in some cases and shouldn't be stored
  */
 
-// Tables to be filtered and not stored
-// These tables are always used except when 'none' filtering option is used
+// These tables are always filtered except when 'none' filtering option is used
+// always deleted when performing a restore
 $tables_filtered =  array(
   'cache',
   'cache_.*',
@@ -45,10 +46,16 @@ $tables_filtered =  array(
   'votingapi_cache',
 );
 
+// Tables for 'min' filtering option
+// preserved in working space
+$tables_filtered_l1 = array(
+  'sessions',
+  'openid_association',
+);
 
-// Tables to be filtered and not stored, but preserved in the working space
-// Tables for 'full' filtering option
-$tables_filtered_full =  array(
+// Tables for 'full' filtering option, in addition to 'min'
+// preserved in working space
+$tables_filtered_l2 =  array(
   'accesslog',
   'aggregator_item',
   'aggregator_category_item',
@@ -69,14 +76,14 @@ $tables_filtered_full =  array(
   'watchdog',
 );
 
-// Tables for 'min' filtering option
-$tables_filtered_min = array(
-  'sessions',
-  'openid_association',
-);
+
+/**
+ * Classifying Tables
+ * Should the data be taken from development, production, or be merged from the two
+ */
 
 
-// Tables that contain content to be merged
+// Tables that contain content to be merged from both development and production
 $tables_merge = array(
   'aggregator_category',
   'aggregator_category_feed',
@@ -112,8 +119,8 @@ $tables_merge = array(
 );
 
 
-// Tables that contain user data and user tracking
-// This data will override any data made during development
+// Tables that contain content to be taken from production
+// Will override any data made during development
 $tables_override = array(
   'accesslog',
   'aggregator_item',
@@ -139,7 +146,9 @@ $tables_override = array(
   'watchdog',
 );
 
-// Tables used for everything else.  Just here for the sake of recording it.
+// Tables that contain content to be taken from development
+// Will override any data made during production (so don't change this data in production!)
+// This table actually doesn't do anything in the script, it's just here for the sake of information
 $tables_structure = array(
   'access',
   'actions',
