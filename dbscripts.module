@@ -520,7 +520,7 @@ function dbscripts_restore($file = 'development', $filter_option = 'full', $sequ
   $dump_file = $file.'.sql';
 
   // Check that the requested file exists
-  if (!file_exists($file_path.'/'.$file)) {
+  if (!file_exists($file_path.'/'.$dump_file)) {
     return "\nThe file does not exist: $file_path/$dump_file\n\n";
   }
 
