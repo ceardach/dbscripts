@@ -392,13 +392,8 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   if (!file_exists("$dump_location/tables")) {exec("mkdir -p $dump_location/tables");}
 
   // Create an array of all tables in the database and store it
-  exec("echo '<?php' > $dump_location/table_list.php");
-  exec('echo \'$table_list = array(\' >> '.$dump_location.'/table_list.php');
-  exec("$mysqldump --add-drop-table --no-data $db_connection_settings | grep 'DROP TABLE' | sed -e \"s/DROP TABLE IF EXISTS ./  '/g\" -e \"s/.;/',/g\" >> $dump_location/table_list.php");
-  exec("echo ');' >> $dump_location/table_list.php");
-
-  // Now lets load this array of tables and use it
-  require("$dump_location/table_list.php");
+  exec("$mysqldump --add-drop-table --no-data $db_connection_settings | grep 'DROP TABLE' | sed -e \"s/DROP TABLE IF EXISTS .//g\" -e \"s/.;//g\" > $dump_location/table_list.txt");
+  $table_list = file("$dump_location/table_list.txt", FILE_IGNORE_NEW_LINES);
 
   // Set the filtering options and message to be presented to the user
   $tables_cleared = array();
