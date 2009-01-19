@@ -399,26 +399,26 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   // Set the filtering options and message to be presented to the user
   switch($filter_option){
     case 'none':
-      $tables_trashed = array();
+      $tables_cleared = array();
       $tables_preserved = array();
       $message = "Performed a full database dump to $branch.";
       break;
 
     case 'min':
-      $tables_trashed = $tables_filtered;
+      $tables_cleared = $tables_filtered;
       $tables_preserved = $tables_filtered_l1;
       $message = "Dumped the database to $branch with minimal filtering.";
       break;
 
     default:
-      $tables_trashed = $tables_filtered;
+      $tables_cleared = $tables_filtered;
       $tables_preserved = array_merge($tables_filtered_l1,$tables_filtered_l2);
       $message = "Dumped the database to $branch with full filtering options.";
       break;
   }
 
   $filter = '';
-  foreach($tables_trashed as $filtered_data) {
+  foreach($tables_cleared as $filtered_data) {
     $filter .= "|grep -v 'INSERT INTO .".$filtered_data.".' ";
   }
   foreach($tables_preserved as $preserved_data) {
