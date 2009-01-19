@@ -390,11 +390,13 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   }
 
   $dump_location = "$dump_path/$branch";
+  $temp_location = "$dump_path/tmp";
 
-  // Create the dump location if it doesn't exist
-  if (!file_exists($dump_location)) {
-    exec("mkdir -p $dump_location");
-  }
+  // Creating required folders
+  if (!file_exists($temp_location)) {exec("mkdir -p $temp_location");}
+  if (!file_exists($dump_location)) {exec("mkdir -p $dump_location");}
+  if (!file_exists("$dump_location/data")) {exec("mkdir -p $dump_location/data");}
+  if (!file_exists("$dump_location/tables")) {exec("mkdir -p $dump_location/tables");}
 
   // Create an array of all tables in the database and store it
   exec("echo '<?php' > $dump_location/table_list.php");
@@ -406,10 +408,10 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   require("$dump_location/table_list.php");
 
   // Set the filtering options and message to be presented to the user
+  $tables_cleared = array();
+  $tables_preserved = array();
   switch($filter_option){
     case 'none':
-      $tables_cleared = array();
-      $tables_preserved = array();
       $message = "Performed a full database dump to $branch.";
       break;
 
@@ -444,29 +446,43 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
 
   }
 
-  print_r($tables_dumped);
-
-  $filter = '';
-  foreach($tables_cleared as $filtered_data) {
-    $filter .= "|grep -v 'INSERT INTO .".$filtered_data.".' ";
-  }
-  foreach($tables_preserved as $preserved_data) {
-    $filter .= "|grep -v 'DROP TABLE IF EXISTS .".$preserved_data.".;' |sed 's/CREATE TABLE .".$preserved_data."./CREATE TABLE IF NOT EXISTS `".$preserved_data."`/g' |grep -v 'INSERT INTO .".$preserved_data.".' ";
-  }
-
   // These are all the special dump options that make the database diffable
-  $dump_options = "--skip-opt --add-drop-table --add-locks --create-options --quick --lock-tables --set-charset --disable-keys --order-by-primary --comments=FALSE --default-character-set=utf8 --character-sets-dir=$charsets --hex-blob";
+  // and preserve character set
+  $dump_options = "--skip-opt --add-drop-table --add-locks --create-options --quick --lock-tables --set-charset --disable-keys --order-by-primary --skip-comments --comments=FALSE --default-character-set=utf8 --character-sets-dir=$charsets --hex-blob";
 
-  // and finally, lets dump the database to a temporary file
-  exec("$mysqldump $dump_options $db_connection_settings $filter > $dump_path/temp");
-
-  // check that the file actually has data
-  if (file_get_contents("$dump_path/temp") == '') {
-    $message = "Empty data returned.  There may be a problem connecting to the database.";
-    exec("rm $dump_path/temp");
-  } else {
-    exec("mv $dump_path/temp $dump_location/db.sql");
+  // Dump the structure of all tables
+  if (exec("ls $temp_location")) exec("rm $temp_location/*");
+  foreach ($table_list as $table) {
+    $filter ='';
+    if (in_array($table,$tables_preserved)) {
+    	$filter = "|grep -v 'DROP TABLE IF EXISTS' |sed 's/CREATE TABLE/CREATE TABLE IF NOT EXISTS/g'";
+    }
+  	exec("$mysqldump $dump_options --no-data $db_connection_settings --tables $table $filter > $temp_location/$table.sql");
   }
+
+  // Check that a file actually has data, and stop if it doesn't
+  if (file_get_contents("$temp_location/$table_list[0].sql") == '') {
+    print "\nEmpty data returned.  There may be a problem connecting to the database.\n\n";
+    exec("rm $temp_location/*");
+    exit;
+  }
+
+  // Move the table files from the temp directory
+  if (exec("ls $dump_location/tables")) exec("rm $dump_location/tables/*");
+  exec("mv $temp_location/* $dump_location/tables");
+
+  // Dump the data of all tables we're tracking
+  foreach ($tables_dumped as $table) {
+    exec("$mysqldump $dump_options --no-create-info $db_connection_settings --tables $table > $temp_location/$table.sql");
+
+    // if there's no data, then delete the file
+    $data = exec("grep 'INSERT INTO' $temp_location/$table.sql");
+    if (!$data) {exec("rm $temp_location/$table.sql");}
+  }
+
+  // Move the data files from the temp directory
+  if (exec("ls $dump_location/data")) exec("rm $dump_location/data/*");
+  exec("mv $temp_location/* $dump_location/data");
 
   // let the user know what happened
   return "\n$message\n\n";
