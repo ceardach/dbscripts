@@ -394,7 +394,7 @@ function dbscripts_dump($file = 'development', $filter_option = 'full') {
 
   // Create the dump location if it doesn't exist
   if (!file_exists($dump_path)) {
-    exec("mkdir $dump_path");
+    exec("mkdir -p $dump_path");
   }
 
   // Set the filtering options and message to be presented to the user
@@ -640,7 +640,7 @@ function dbscripts_merge($dev_db = 'development', $lastmerge_db = 'last-merge', 
 
   // Ensure tmp folder exists
   if (!file_exists($dump_path.'/tmp')) {
-    exec("mkdir $dump_path/tmp");
+    exec("mkdir -p $dump_path/tmp");
   }
 
   // After a conflict, the temp files would still exist
