@@ -82,11 +82,6 @@ function dbscripts_get_options($argv) {
       break;
   }
 
-  $options['sequences'] = FALSE;
-  if (in_array('sequences',$argv)) {
-    $options['sequences'] = TRUE;
-  }
-
   return $options;
 }
 
@@ -172,7 +167,7 @@ NAME
     Restore - database restore script
 
 SYNOPSIS
-    restore.php [file] [filter-option] [sequences]
+    restore.php [branch] [filter-option]
 
 EXAMPLE USAGE
     development: restore.php
@@ -213,11 +208,6 @@ OPTIONS
                 file.
         Defaults to: full
 
-    sequences
-        Set this option if sequences should be preserved within the MySQL
-        database.  This is a special case scenario that is only used during the
-        merge script.
-
 FILES
     {$script_path}/config.inc
         Configuration settings for customizing these scripts for your
@@ -244,7 +234,7 @@ NAME
   Erase - database erase script
 
 SYNOPSIS
-  erase.php [filter-option] [sequences]
+  erase.php [filter-option]
 
 EXAMPLE USAGE
     development: erase.php
@@ -271,11 +261,6 @@ OPTIONS
                 NO filtering is performed whatsoever.  The entire database will
                 be erased.
         Defaults to: full
-
-    sequences
-        Set this option if sequences should be preserved within the MySQL
-        database.  This is a spcial case scenario that is only used during the
-        merge script.
 
 FILES
     {$script_path}/config.inc
@@ -460,11 +445,8 @@ function dbscripts_dump($file = 'development', $filter_option = 'full') {
  *       erasing a production database.
  *   'none' - NO filtering is performed whatsoever.  The entire database will be
  *       erased.
- * @param $sequences
- *   Set if sequences should be preserved or not.  This is a special case
- *   scenario that is only used during the merge function.
  */
-function dbscripts_erase($filter_option = 'full', $sequences = FALSE) {
+function dbscripts_erase($filter_option = 'full') {
   require('config.inc');
 
   $db_connection_settings = dbscripts_db_connect();
@@ -492,9 +474,6 @@ function dbscripts_erase($filter_option = 'full', $sequences = FALSE) {
   }
 
   $filter = '';
-  if ($sequences) {
-    $tables_preserved[] = 'sequences';
-  }
   foreach($tables_preserved as $preserved_data) {
     $filter .= "|grep -v 'DROP TABLE IF EXISTS .$preserved_data.;'";
   }
@@ -529,11 +508,8 @@ function dbscripts_erase($filter_option = 'full', $sequences = FALSE) {
  *       when restoring within a production environment.
  *   'none' - NO filtering is performed whatsoever.  The entire database is
  *       erased from MySQL and restored with the data from the given file.
- * @param $sequences
- *   Set if sequences should be preserved or not.  This is a special case
- *   scenario that is only used during the merge function.
  */
-function dbscripts_restore($file = 'development', $filter_option = 'full', $sequences = FALSE) {
+function dbscripts_restore($file = 'development', $filter_option = 'full') {
   require('config.inc');
 
   $db_connection_settings = dbscripts_db_connect();
@@ -550,40 +526,26 @@ function dbscripts_restore($file = 'development', $filter_option = 'full', $sequ
     return "\nThe file does not exist: $dump_path/$dump_file\n\n";
   }
 
-  // If sequences need to be restored, we have to create a temp file
-  $sequences_message = '';
-  if ($sequences) {
-    // Create a temp file with sequences striped out
-    exec("grep -v 'DROP TABLE IF EXISTS .sequences.;' $dump_path/$dump_file |sed 's/CREATE TABLE .sequences./CREATE TABLE IF NOT EXISTS `sequences`/g' |grep -v 'INSERT INTO .sequences. VALUES' > $dump_path/tmp/database.tmp");
-    $dump_file = '/tmp/database.tmp'; // reset dump_file to the temp version
-    $sequences_message = 'including sequences';
-  }
-
   // Erase the database so any tables that were removed stay removed
-  dbscripts_erase($filter_option,$sequences);
+  dbscripts_erase($filter_option);
 
   // Set the message
   switch($filter_option){
     case 'none':
-      $message = "Restored the full database $sequences_message";
+      $message = "Restored the full database";
       break;
 
     case 'min':
-      $message = "Restored the database perserving minimal tables $sequences_message";
+      $message = "Restored the database perserving minimal tables";
       break;
 
     default:
-      $message = "Restored the database preserving the full option of tables $sequences_message";
+      $message = "Restored the database preserving the full option of tables";
       break;
   }
 
   // Restore the database and let the user know what happened
   exec("$mysql $db_connection_settings < $dump_path/$dump_file");
-
-  // Erase the temp file if it was created
-  if ($sequences) {
-    exec("rm $dump_path/tmp/database.tmp");
-  }
 
   return "\n$message\n\n";
 }
@@ -743,7 +705,7 @@ function dbscripts_merge($dev_db = 'development', $lastmerge_db = 'last-merge', 
 
     $message .= "cat $dump_path/tmp/data_merged.sql >> $dump_path/tmp/merged_database.sql\n";
     $message .= "cp $dump_path/tmp/merged_database.sql $dump_path/$prod_db.sql\n";
-    $message .= "$script_path/restore.php production min sequences\n";
+    $message .= "$script_path/restore.php production min\n";
     $message .= "$script_path/dump.php production min\n";
     $message .= "cp $dump_path/tmp/merged_database.sql $dump_path/$dev_db.sql\n";
     $message .= "$script_path/restore.php $dev_db\n";
@@ -766,13 +728,12 @@ function dbscripts_merge($dev_db = 'development', $lastmerge_db = 'last-merge', 
     print ".";
 
 
-    // Restore and dump databases so they are formated correctly with correct
-    // sequences for their version and prepared to be committed into svn.
+    // Restore and dump databases so they are formated correctly
     //
     // Production is restored first to align the database with the sequences currently
     // in MySQL (which is the production version), then restored again after
     // development to leave the MySQL status ready to be testing for the live version
-    dbscripts_restore($prod_db, 'min', 'sequences');
+    dbscripts_restore($prod_db, 'min');
     print ".";
     dbscripts_dump($prod_db, 'min');
     print ".";
