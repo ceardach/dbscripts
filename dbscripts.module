@@ -420,18 +420,17 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   $special_tables = array_merge($tables_cleared,$tables_preserved);
   $tables_dumped = $table_list;
   foreach ($tables_dumped as $key => $table) {
-    // Since some tables are specified with a *, generating other possible values
+    // Since some tables are specified with a .*, generating other possible values
     $truncated = explode('_', $table);
     $truncated1 = isset($truncated[0]) ? $truncated[0].'_.*' : '';
     $truncated2 = isset($truncated[1]) ? $truncated[1].'_.*' : '';
 
     $check_tables = array($table, $truncated1, $truncated2);
     foreach ($check_tables as $check) {
-      if (in_array($check,$special_tables)) {
+      if (in_array($check, $special_tables)) {
         unset($tables_dumped[$key]); // remove the table if it exists in $special_tables
       }
     }
-
   }
 
   // These are all the special dump options that make the database diffable
