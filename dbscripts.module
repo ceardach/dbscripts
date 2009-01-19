@@ -3,13 +3,8 @@
 /**
   TODO
 
-  Dump each table's schema as a file (table_name_schema)
-  Dump each table's data as a file (table_name_data)
-  Have flag to dump as single file, or restore from single file
-
-  Have a config setting to store sequences seperately by user
+  Readjust working space sequences to latest dev snapshot
   Grab sequences as last line of file?
-  Check if table auto increments next highest
 
   Merge by copying schema and data files for non-merge content
   Merge content as normal
@@ -462,7 +457,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   foreach ($tables_dumped as $table) {
     exec("$mysqldump $dump_options --no-create-info $db_connection_settings --tables $table > $temp_location/$table.sql");
 
-    // if there's no data, then delete the file
+    // If there's no data, then delete the file
     $data = exec("grep 'INSERT INTO' $temp_location/$table.sql");
     if (!$data) {exec("rm $temp_location/$table.sql");}
   }
@@ -471,7 +466,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   if (exec("ls $dump_location/data")) exec("rm $dump_location/data/*");
   exec("mv $temp_location/* $dump_location/data");
 
-  // let the user know what happened
+  // Let the user know what happened
   return "\n$message\n\n";
 }
 
