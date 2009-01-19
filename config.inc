@@ -3,8 +3,8 @@
 /**
  * Path Settings
  *   - Relative path from where you would be running the scripts
-       (assumed to be your version control root, which may or may not differ from
-       your web root)
+ *     (assumed to be your version control root, which may or may not differ from
+ *     your web root)
  *   - Do not use trailing slashes
  */
 
@@ -91,8 +91,8 @@ $tables_merge = array(
   'authmap',
   'blogapi_files',
   'book',
-  'content_field_.*', 
-  'content_type_.*', 
+  'content_field_.*',
+  'content_type_.*',
   'files',
   'forum',
   'image',

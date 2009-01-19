@@ -2,21 +2,21 @@
 
 /**
   TODO
-  
+
   Dump each table's schema as a file (table_name_schema)
   Dump each table's data as a file (table_name_data)
   Have flag to dump as single file, or restore from single file
-  
+
   Have a config setting to store sequences seperately by user
   Grab sequences as last line of file?
   Check if table auto increments next highest
-  
+
   Merge by copying schema and data files for non-merge content
   Merge content as normal
   Restore&Dump only modified/merged tables
     check diff, and flag to be restored and dumped
     (Double check if this is still nessisary if data files are seperate)
-  
+
   Have script to complete merge process after conflict (merge.php finish)
 **/
 
@@ -26,7 +26,7 @@
 function dbscripts_db_connect() {
   require('config.inc');
   require("$settings_path/settings.php");
-  
+
   preg_match('/'.$dbtype.':\/\/([^:]+):([^@]+)@([^\/]+)\/(.+)/', $db_url, $db_settings);
 
   if (empty($db_settings)) {
@@ -59,7 +59,7 @@ function dbscripts_get_options($argv) {
   } else {
     $use_default = TRUE;
   }
-  
+
   if ($use_default) {
     $options['file'] = 'development';
     $filter_options = isset($argv[1]) ? $argv[1] : '';
@@ -67,16 +67,16 @@ function dbscripts_get_options($argv) {
     $options['file'] = $argv[1];
     $filter_options = isset($argv[2]) ? $argv[2] : '';
   }
-  
+
   switch ($filter_options) {
     case 'min':
     $options['filter'] = 'min';
       break;
-    
+
     case 'none':
       $options['filter'] = 'none';
       break;
-    
+
     default:
       $options['filter'] = 'full';
       break;
@@ -120,7 +120,7 @@ EXAMPLE USAGE
 DESCRIPTION
     Dump the database from MySQL to a given file.  The dump is 'diffable'
     allowing it to be under version control.  Filtering options are performed
-    to avoid dumping data that is not nessisary to be stored from development 
+    to avoid dumping data that is not nessisary to be stored from development
     and production environments.
 
 OPTIONS
@@ -203,7 +203,7 @@ OPTIONS
                 cache data.  Recommended to use this when restoring within a
                 development environment.
             min
-                Preserves only a select minimum of data currently residing 
+                Preserves only a select minimum of data currently residing
                 within the MySQL database.  Most useful for preserving sessions
                 and cache data.  Recommended to use this when restoring within a
                 production environment.
@@ -274,9 +274,9 @@ OPTIONS
 
     sequences
         Set this option if sequences should be preserved within the MySQL
-        database.  This is a spcial case scenario that is only used during the 
+        database.  This is a spcial case scenario that is only used during the
         merge script.
-        
+
 FILES
     {$script_path}/config.inc
         Configuration settings for customizing these scripts for your
@@ -313,26 +313,26 @@ DESCRIPTION
 OPTIONS
     dev-db
         The location of the database file used for development.  Only configuration
-        and content changes will be preserved from this file.  All user data 
+        and content changes will be preserved from this file.  All user data
         will be lost.
         Relative to: {$file_path}
         Defaults to: {$file_path}/development.sql
 
     last-merge-db
         The location of the database file that was used to represent the state
-        the last time both production development were merged.  This is 
-        important to be able to track the difference between an addition and a 
+        the last time both production development were merged.  This is
+        important to be able to track the difference between an addition and a
         subtraction.
         Relative to: {$file_path}
         Defaults to: {$file_path}/last-merge.sql
 
     prod-db
         The location of the database file used for production.  Only content and
-        user data will be preserved from this file.  All other data will be 
+        user data will be preserved from this file.  All other data will be
         lost.
         Relative to: {$file_path}
         defaults to: {$file_path}/production.sql
-        
+
 FILES
     {$script_path}/config.inc
         Configuration settings for customizing these scripts for your
@@ -372,17 +372,17 @@ EOF;
  *   Choose what level of filtering should be performed during the dump.  Filter
  *   levels are configured in config.inc
  *   'full' - Default option.  Removes the full option of data from the dump.
- *       Most useful for removing user, sessions and cache data.  Use this when 
+ *       Most useful for removing user, sessions and cache data.  Use this when
  *       dumping a development database.
  *   'min' - Removes only a select minimum of data from the dump.  Most useful
- *       for removing sessions and cache data.  Use this when dumping a 
+ *       for removing sessions and cache data.  Use this when dumping a
  *       production database.
  *   'none' - NO filtering is performed whatsoever.  The entire database is
  *       dumped to the given file.
  */
 function dbscripts_dump($file = 'development', $filter_option = 'full') {
   require('config.inc');
-  
+
   $db_connection_settings = dbscripts_db_connect();
   if (!$db_connection_settings) {
     return "\nImproper database connection settings.\n\n";
@@ -417,7 +417,7 @@ function dbscripts_dump($file = 'development', $filter_option = 'full') {
       $message = "Dumped the database to $file with full filtering options.";
       break;
   }
-  
+
   $filter = '';
   foreach($tables_trashed as $filtered_data) {
     $filter .= "|grep -v 'INSERT INTO .".$filtered_data.".' ";
@@ -449,14 +449,14 @@ function dbscripts_dump($file = 'development', $filter_option = 'full') {
  * Erase the database
  *
  * @param $filter_option
- *   Choose what level of filtering should be performed while erasing the 
+ *   Choose what level of filtering should be performed while erasing the
  *   database.  Filter levels are configured in config.inc.  Any options set to
  *   be filtered will be subsequently PRESERVED in the database, and not erased.
  *   'full' - Default option.  Preserves the full option of data from the dump.
- *       Most useful for keeping user, sessions and cache data.  Use this when 
+ *       Most useful for keeping user, sessions and cache data.  Use this when
  *       erasing a development database.
  *   'min' - Preserves only a select minimum of data from the dump.  Most useful
- *       for keeping sessions data so you don't get logged out.  Use this when 
+ *       for keeping sessions data so you don't get logged out.  Use this when
  *       erasing a production database.
  *   'none' - NO filtering is performed whatsoever.  The entire database will be
  *       erased.
@@ -466,7 +466,7 @@ function dbscripts_dump($file = 'development', $filter_option = 'full') {
  */
 function dbscripts_erase($filter_option = 'full', $sequences = FALSE) {
   require('config.inc');
-  
+
   $db_connection_settings = dbscripts_db_connect();
   if (!$db_connection_settings) {
     return "\nImproper database connection settings.\n\n";
@@ -516,16 +516,16 @@ function dbscripts_erase($filter_option = 'full', $sequences = FALSE) {
  * @param $file
  *   File the database should be restored from.  Defaults to 'development'.
  *   Alternative options that are supported by default are 'production' and
- *   'last-merge'.  Other filename patterns may be used if you wish to restore 
+ *   'last-merge'.  Other filename patterns may be used if you wish to restore
  *   the database from an alternate location.
  * @param $filter_option
- *   Choose what level of filtering should be performed during the restoration.  
+ *   Choose what level of filtering should be performed during the restoration.
  *   Filter levels are configured in config.inc
  *   'full' - Default option.  Preserves the full option of data currently
- *       residing within MySQL. Most useful for preserving user, sessions and 
+ *       residing within MySQL. Most useful for preserving user, sessions and
  *       cache data.  Use this when restoring within a development environment.
  *   'min' - Preserves only a select minimum of data currently residing within
- *       MySQL.  Most useful for preserving sessions and cache data.  Use this 
+ *       MySQL.  Most useful for preserving sessions and cache data.  Use this
  *       when restoring within a production environment.
  *   'none' - NO filtering is performed whatsoever.  The entire database is
  *       erased from MySQL and restored with the data from the given file.
@@ -535,7 +535,7 @@ function dbscripts_erase($filter_option = 'full', $sequences = FALSE) {
  */
 function dbscripts_restore($file = 'development', $filter_option = 'full', $sequences = FALSE) {
   require('config.inc');
-  
+
   $db_connection_settings = dbscripts_db_connect();
   if (!$db_connection_settings) {
     return "\nImproper database connection settings.\n\n";
@@ -600,7 +600,7 @@ function dbscripts_restore($file = 'development', $filter_option = 'full', $sequ
  *   configuration and content changes will be preserved.  All user data will
  *   be lost.
  * @param $lastmerge_db
- *   Location of the database file that was used to represent the state the 
+ *   Location of the database file that was used to represent the state the
  *   last time both production and development were merged.  This is important
  *   to be able to track the difference between an addition and a subtraction.
  * @param $prod_db
@@ -609,7 +609,7 @@ function dbscripts_restore($file = 'development', $filter_option = 'full', $sequ
  */
 function dbscripts_merge($dev_db = 'development', $lastmerge_db = 'last-merge', $prod_db = 'production') {
   require('config.inc');
-  
+
   // If empty data gets sent through, reset it
   if (!$dev_db) {
     $dev_db = 'development';
