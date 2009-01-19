@@ -435,11 +435,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   // Dump the structure of all tables
   if (exec("ls $temp_location")) exec("rm $temp_location/*");
   foreach ($table_list as $table) {
-    $filter ='';
-    if (in_array($table,$tables_preserved)) {
-    	$filter = "|grep -v 'DROP TABLE IF EXISTS' |sed 's/CREATE TABLE/CREATE TABLE IF NOT EXISTS/g'";
-    }
-  	exec("$mysqldump $dump_options --no-data $db_connection_settings --tables $table $filter > $temp_location/$table.sql");
+  	exec("$mysqldump $dump_options --no-data $db_connection_settings --tables $table > $temp_location/$table.sql");
   }
 
   // Check that a file actually has data, and stop if it doesn't
