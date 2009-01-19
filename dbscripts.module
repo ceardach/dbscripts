@@ -363,7 +363,7 @@ EOF;
 /**
  * Dump the database
  *
- * @param $file
+ * @param $branch
  *   File the database should be dumped to.  Defaults to 'development'.
  *   Alternative options that are supported by default are 'production' and
  *   'last-merge'.  Other filename patterns may be used if you wish to dump the
@@ -380,7 +380,7 @@ EOF;
  *   'none' - NO filtering is performed whatsoever.  The entire database is
  *       dumped to the given file.
  */
-function dbscripts_dump($file = 'development', $filter_option = 'full') {
+function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   require('config.inc');
 
   $db_connection_settings = dbscripts_db_connect();
@@ -390,7 +390,7 @@ function dbscripts_dump($file = 'development', $filter_option = 'full') {
   }
 
   // Set the file to dump to
-  $dump_file = $file.'.sql';
+  $dump_file = $branch.'.sql';
 
   // Create the dump location if it doesn't exist
   if (!file_exists($dump_path)) {
@@ -408,13 +408,13 @@ function dbscripts_dump($file = 'development', $filter_option = 'full') {
     case 'min':
       $tables_trashed = $tables_filtered;
       $tables_preserved = $tables_filtered_l1;
-      $message = "Dumped the database to $file with minimal filtering.";
+      $message = "Dumped the database to $branch with minimal filtering.";
       break;
 
     default:
       $tables_trashed = $tables_filtered;
       $tables_preserved = array_merge($tables_filtered_l1,$tables_filtered_l2);
-      $message = "Dumped the database to $file with full filtering options.";
+      $message = "Dumped the database to $branch with full filtering options.";
       break;
   }
 
@@ -513,7 +513,7 @@ function dbscripts_erase($filter_option = 'full', $sequences = FALSE) {
 /**
  * Restore the database
  *
- * @param $file
+ * @param $branch
  *   File the database should be restored from.  Defaults to 'development'.
  *   Alternative options that are supported by default are 'production' and
  *   'last-merge'.  Other filename patterns may be used if you wish to restore
@@ -533,7 +533,7 @@ function dbscripts_erase($filter_option = 'full', $sequences = FALSE) {
  *   Set if sequences should be preserved or not.  This is a special case
  *   scenario that is only used during the merge function.
  */
-function dbscripts_restore($file = 'development', $filter_option = 'full', $sequences = FALSE) {
+function dbscripts_restore($branch = 'development', $filter_option = 'full', $sequences = FALSE) {
   require('config.inc');
 
   $db_connection_settings = dbscripts_db_connect();
@@ -543,7 +543,7 @@ function dbscripts_restore($file = 'development', $filter_option = 'full', $sequ
   }
 
   // Set the file to restore from
-  $dump_file = $file.'.sql';
+  $dump_file = $branch.'.sql';
 
   // Check that the requested file exists
   if (!file_exists("$dump_path/$dump_file")) {
