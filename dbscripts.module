@@ -457,9 +457,21 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   $dump_options = "--skip-opt --add-drop-table --add-locks --create-options --quick --lock-tables --set-charset --disable-keys --order-by-primary --skip-comments --comments=FALSE --default-character-set=utf8 --character-sets-dir=$charsets --hex-blob";
 
   // Dump the structure of all tables
-  if (exec("ls $temp_location")) exec("rm $temp_location/*");
+  if (exec("ls $temp_location")) exec("rm -r $temp_location/*");
   foreach ($table_list as $table) {
   	exec("$mysqldump $dump_options --no-data $db_connection_settings --tables $table > $temp_location/$table.sql");
+
+    // We want the current auto_increment value to be easily accessible
+    if (exec("grep AUTO_INCREMENT $temp_location/$table.sql")) {
+    	$string = exec("grep AUTO_INCREMENT $temp_location/$table.sql");
+      $string_parts = explode(' ', $string);
+      foreach ($string_parts as $part) {
+      	if (strpos($part, 'AUTO_INCREMENT') !== FALSE) {
+      		$current_increment = str_replace('AUTO_INCREMENT=', '', $part);
+      	}
+      }
+      exec("echo $current_increment > $temp_location/{$table}-increment.txt");
+    }
   }
 
   // Check that a file actually has data, and stop if it doesn't
