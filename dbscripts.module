@@ -349,6 +349,40 @@ EOF;
 
 
 /**
+ * Remove Tables from a given array
+ *
+ * When given an array of all tables, and remove all tables given in the tables
+ * to extract array.
+ *
+ * @param $branch
+ *    Which branch should be use for its list of tables
+ * @param $tables_extract
+ *    An array of table names that should be removed
+ */
+function dbscripts_remove_tables($branch, $tables_extract) {
+  require('config.inc');
+
+  $tables = file("$dump_path/$branch/table_list.txt", FILE_IGNORE_NEW_LINES);
+
+  foreach ($tables as $key => $table) {
+    // Since some tables are specified with a .*, generating other possible values
+    $truncated = explode('_', $table);
+    $truncated1 = isset($truncated[0]) ? $truncated[0].'_.*' : '';
+    $truncated2 = isset($truncated[1]) ? $truncated[1].'_.*' : '';
+
+    $check_tables = array($table, $truncated1, $truncated2);
+    foreach ($check_tables as $check) {
+      if (in_array($check, $tables_extract)) {
+        unset($tables[$key]); // remove the table if it exists in $tables_extract
+      }
+    }
+  }
+
+  return $tables;
+}
+
+
+/**
  * Dump the database
  *
  * @param $branch
@@ -411,22 +445,8 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
       break;
   }
 
-  // get an array of tables that don't have special treatment
-  $special_tables = array_merge($tables_cleared,$tables_preserved);
-  $tables_dumped = $table_list;
-  foreach ($tables_dumped as $key => $table) {
-    // Since some tables are specified with a .*, generating other possible values
-    $truncated = explode('_', $table);
-    $truncated1 = isset($truncated[0]) ? $truncated[0].'_.*' : '';
-    $truncated2 = isset($truncated[1]) ? $truncated[1].'_.*' : '';
-
-    $check_tables = array($table, $truncated1, $truncated2);
-    foreach ($check_tables as $check) {
-      if (in_array($check, $special_tables)) {
-        unset($tables_dumped[$key]); // remove the table if it exists in $special_tables
-      }
-    }
-  }
+  // Create an array of tables whose data will be dumped
+  $tables_dumped = dbscripts_remove_tables($branch, array_merge($tables_cleared, $tables_preserved));
 
   // These are all the special dump options that make the database diffable
   // and preserve character set
@@ -582,21 +602,8 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
       break;
   }
 
-  // Get an array of tables to be restored -- the remainder will stay in the MySQL database
-  $tables_restored = file("$dump_location/table_list.txt", FILE_IGNORE_NEW_LINES);
-  foreach ($tables_restored as $key => $table) {
-    // Since some tables are specified with a .*, generating other possible values
-    $truncated = explode('_', $table);
-    $truncated1 = isset($truncated[0]) ? $truncated[0].'_.*' : '';
-    $truncated2 = isset($truncated[1]) ? $truncated[1].'_.*' : '';
-
-    $check_tables = array($table, $truncated1, $truncated2);
-    foreach ($check_tables as $check) {
-      if (in_array($check, $tables_preserved)) {
-        unset($tables_restored[$key]); // remove the table if it exists in $tables_preserved
-      }
-    }
-  }
+  // Create an array of tables whose data will be restored
+  $tables_restored = dbscripts_remove_tables($branch, $tables_preserved);
 
   // Erase the database so any tables that were removed stay removed
   dbscripts_erase($filter_option);
