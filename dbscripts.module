@@ -712,7 +712,7 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
   $message .= "Merge was successfull.";
 
   // Clear temp
-  //exec("rm -r $temp_location/*");
+  exec("rm -r $temp_location/*");
 
   return "\n$message\n\n";
 }
