@@ -393,6 +393,29 @@ function dbscripts_process_tables($branch, $tables_compare, $remove_match = TRUE
 
 
 /**
+ * Get a given table's current auto increment value
+ */
+function dbscripts_table_increment($table, $branch) {
+  require('config.inc');
+
+  $branch_location = "$dump_path/$branch";
+
+  $increment = FALSE;
+  if (exec("grep AUTO_INCREMENT $branch_location/tables/$table.sql")) {
+    $string = exec("grep AUTO_INCREMENT $branch_location/tables/$table.sql");
+    $string_parts = explode(' ', $string);
+    foreach ($string_parts as $part) {
+      if (strpos($part, 'AUTO_INCREMENT') !== FALSE) {
+        $increment = str_replace('AUTO_INCREMENT=', '', $part);
+      }
+    }
+  }
+
+  return $increment;
+}
+
+
+/**
  * Dump the database
  *
  * @param $branch
@@ -460,18 +483,6 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   if (exec("ls $temp_location")) exec("rm -r $temp_location/*");
   foreach ($table_list as $table) {
   	exec("$mysqldump $dump_options --no-data $db_connection_settings --tables $table > $temp_location/$table.sql");
-
-    // We want the current auto_increment value to be easily accessible
-    if (exec("grep AUTO_INCREMENT $temp_location/$table.sql")) {
-    	$string = exec("grep AUTO_INCREMENT $temp_location/$table.sql");
-      $string_parts = explode(' ', $string);
-      foreach ($string_parts as $part) {
-      	if (strpos($part, 'AUTO_INCREMENT') !== FALSE) {
-      		$current_increment = str_replace('AUTO_INCREMENT=', '', $part);
-      	}
-      }
-      exec("echo $current_increment > $temp_location/{$table}-increment.txt");
-    }
   }
 
   // Check that a file actually has data, and stop if it doesn't
