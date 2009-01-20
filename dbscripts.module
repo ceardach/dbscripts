@@ -503,15 +503,15 @@ function dbscripts_erase($filter_option = 'full') {
   }
 
   // Set the filtering options and message to be presented to the user
+  $tables_preserved = array();
   switch ($filter_option) {
+    case 'none';
+      $message = "Erased the entire database.";
+      break;
+
     case 'min':
       $tables_preserved = $tables_filtered_l1;
       $message = "Erased the database, except for minimal preserved tables.";
-      break;
-
-    case 'none';
-      $tables_preserved = array();
-      $message = "Erased the entire database.";
       break;
 
     default:
@@ -571,28 +571,51 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
   // Check that the requested location exists
   if (!file_exists($dump_location)) {
     return "\nThe path does not exist: $dump_location\n\n";
+    exit;
   }
 
-  // Erase the database so any tables that were removed stay removed
-  dbscripts_erase($filter_option,$sequences);
-
-  // Set the message
+  // Set behavior depending on filter
+  $tables_preserved = array();
   switch($filter_option){
     case 'none':
-      $message = "Restored the full database $sequences_message";
+      $message = "Restored the full database";
       break;
 
     case 'min':
-      $message = "Restored the database perserving minimal tables $sequences_message";
+      $tables_preserved = $tables_filtered_l1;
+      $message = "Restored the database perserving minimal tables";
       break;
 
     default:
-      $message = "Restored the database preserving the full option of tables $sequences_message";
+      $tables_preserved = array_merge($tables_filtered_l1,$tables_filtered_l2);
+      $message = "Restored the database preserving the full option of tables";
       break;
   }
 
-  // Restore the database and let the user know what happened
-  exec("$mysql $db_connection_settings < $dump_location/db.sql");
+  // Get an array of tables to be restored -- the remainder will stay in the MySQL database
+  $tables_restored = file("$dump_location/table_list.txt", FILE_IGNORE_NEW_LINES);
+  foreach ($tables_restored as $key => $table) {
+    // Since some tables are specified with a .*, generating other possible values
+    $truncated = explode('_', $table);
+    $truncated1 = isset($truncated[0]) ? $truncated[0].'_.*' : '';
+    $truncated2 = isset($truncated[1]) ? $truncated[1].'_.*' : '';
+
+    $check_tables = array($table, $truncated1, $truncated2);
+    foreach ($check_tables as $check) {
+      if (in_array($check, $tables_preserved)) {
+        unset($tables_restored[$key]); // remove the table if it exists in $tables_preserved
+      }
+    }
+  }
+
+  // Erase the database so any tables that were removed stay removed
+  dbscripts_erase($filter_option);
+
+  // Restore each database file
+  foreach ($tables_restored as $table) {
+    if (file_exists("$dump_location/tables/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/tables/$table.sql");
+    if (file_exists("$dump_location/data/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/data/$table.sql");
+  }
 
   return "\n$message\n\n";
 }
