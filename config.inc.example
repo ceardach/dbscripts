@@ -3,8 +3,8 @@
 /**
  * Path Settings
  *   - Relative path from where you would be running the scripts
-       (assumed to be your version control root, which may or may not differ from
-       your web root)
+ *     (assumed to be your version control root, which may or may not differ from
+ *     your web root)
  *   - Do not use trailing slashes
  */
 
@@ -15,7 +15,7 @@ $script_path = './dbscripts';
 $settings_path = './sites/default';
 
 // Location where database dump files will be stored
-$file_path = './databases';
+$dump_path = './databases';
 
 // Location of mysql binaries (needs to be set if not in your path)
 $mysql = 'mysql';
@@ -91,8 +91,8 @@ $tables_merge = array(
   'authmap',
   'blogapi_files',
   'book',
-  'content_field_.*', 
-  'content_type_.*', 
+  'content_field_.*',
+  'content_type_.*',
   'files',
   'forum',
   'image',
