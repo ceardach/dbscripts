@@ -607,13 +607,13 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
     return "\nImproper database connection settings.\n\n";
   }
 
-  // Set the location to restore from
+  // Set locations
   $dump_location = "$dump_path/$branch";
+  $workspace_location = "$dump_path/workspace/last-restore";
 
   // Check that the requested location exists
-  if (!file_exists($dump_location)) {
-    return "\nThe path does not exist: $dump_location\n\n";
-  }
+  if (!file_exists($dump_location)) {return "\nThe path does not exist: $dump_location\n\n";}
+  if (!file_exists($workspace_location)) {exec("mkdir -p $workspace_location");}
 
   // Set behavior depending on filter
   $tables_preserved = array();
@@ -642,6 +642,10 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
     if (file_exists("$dump_location/tables/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/tables/$table.sql");
     if (file_exists("$dump_location/data/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/data/$table.sql");
   }
+
+  // Move what was restored to the working space
+  if (exec("ls $workspace_location")) {exec("rm -r $workspace_location/*");}
+  exec("cp -R $dump_location/* $workspace_location");
 
   return "\n$message\n\n";
 }
