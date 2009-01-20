@@ -1,19 +1,22 @@
 QUICK START GUIDE
 
     1. Place the dbscripts folder wherever you would wish.  It is recomended to 
-       not put it in your web root.
+       not put it in your web root 
+       (not your modules folder)
 
-    2. Create the folder database dumps will save to.
+    2. Create the folder database dumps will save to
+       (default setting in config.inc.example is as a sibling to the dbscripts 
+       folder)
 
     3. Copy config.inc.example and PostMergeInstructions.txt.example preserving 
-       their filenames and removing ".example".  Configure them as needed.
+       their filenames and removing ".example".  Configure them as needed
 
     4. If you are using CCK and wish to merge schema changes:
 
-        i. Within your Drupal website, enable the content_copy module and export
-           all of your content types.  Save the export data in files.
+        i. Apply the patch for content_copy to allow modifying existing fields
 
-        ii. Apply the patch for content_copy to allow modifying existing fields
+        ii. Within your Drupal website, enable the content_copy module and export
+            all of your content types.  Save the export data in files
 
 
 EXAMPLE USES
@@ -21,10 +24,12 @@ EXAMPLE USES
 Dumping the database:
     Development: ./dbscripts/dump.php
     Production: ./dbscripts/dump.php production min
+    Last Merge: ./dbscripts/dump.php last-merge
 
 Restoring a database file:
     Development: ./dbscripts/restore.php
     Production: ./dbscripts/restore.php production min
+    Last Merge: ./dbscripts/restore.php last-merge
 
 Merging the databases:
     First bring last-merge.sql and production.sql to the same schema as 
@@ -99,10 +104,10 @@ NOTE: To ensure there is no conflict between development database and production
         4) Import content_type data as needed
         5) Dump database: 
                ./dbscripts/dump.php last-merge
-        6) Restore the last-merge database: 
+        6) Restore the production database: 
                ./dbscripts/restore.php production min
         7) Repeat steps 3 & 4 for the production database
-        8) Dump database: ./dbscripts/dump_database production min
+        8) Dump database: ./dbscripts/dump.php production min
         9) Run the merge script
         10) Test, test, test, then test some more
         11) Commit
