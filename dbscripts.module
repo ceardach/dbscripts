@@ -408,7 +408,6 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   $db_connection_settings = dbscripts_db_connect();
   if (!$db_connection_settings) {
     return "\nImproper database connection settings.\n\n";
-    exit;
   }
 
   $dump_location = "$dump_path/$branch";
@@ -460,9 +459,8 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
 
   // Check that a file actually has data, and stop if it doesn't
   if (file_get_contents("$temp_location/$table_list[0].sql") == '') {
-    print "\nEmpty data returned.  There may be a problem connecting to the database.\n\n";
     exec("rm $temp_location/*");
-    exit;
+    return "\nEmpty data returned.  There may be a problem connecting to the database.\n\n";
   }
 
   // Move the table files from the temp directory
@@ -509,7 +507,6 @@ function dbscripts_erase($filter_option = 'full') {
   $db_connection_settings = dbscripts_db_connect();
   if (!$db_connection_settings) {
     return "\nImproper database connection settings.\n\n";
-    exit;
   }
 
   // Set the filtering options and message to be presented to the user
@@ -572,7 +569,6 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
   $db_connection_settings = dbscripts_db_connect();
   if (!$db_connection_settings) {
     return "\nImproper database connection settings.\n\n";
-    exit;
   }
 
   // Set the location to restore from
@@ -581,7 +577,6 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
   // Check that the requested location exists
   if (!file_exists($dump_location)) {
     return "\nThe path does not exist: $dump_location\n\n";
-    exit;
   }
 
   // Set behavior depending on filter
