@@ -363,7 +363,7 @@ EOF;
 /**
  * Dump the database
  *
- * @param $file
+ * @param $branch
  *   File the database should be dumped to.  Defaults to 'development'.
  *   Alternative options that are supported by default are 'production' and
  *   'last-merge'.  Other filename patterns may be used if you wish to dump the
@@ -380,7 +380,7 @@ EOF;
  *   'none' - NO filtering is performed whatsoever.  The entire database is
  *       dumped to the given file.
  */
-function dbscripts_dump($file = 'development', $filter_option = 'full') {
+function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   require('config.inc');
 
   $db_connection_settings = dbscripts_db_connect();
@@ -389,37 +389,36 @@ function dbscripts_dump($file = 'development', $filter_option = 'full') {
     exit;
   }
 
-  // Set the file to dump to
-  $dump_file = $file.'.sql';
+  $dump_location = "$dump_path/$branch";
 
   // Create the dump location if it doesn't exist
-  if (!file_exists($dump_path)) {
-    exec("mkdir $dump_path");
+  if (!file_exists($dump_location)) {
+    exec("mkdir -p $dump_location");
   }
 
   // Set the filtering options and message to be presented to the user
   switch($filter_option){
     case 'none':
-      $tables_trashed = array();
+      $tables_cleared = array();
       $tables_preserved = array();
-      $message = "Performed a full database dump to $dump_file.";
+      $message = "Performed a full database dump to $branch.";
       break;
 
     case 'min':
-      $tables_trashed = $tables_filtered;
+      $tables_cleared = $tables_filtered;
       $tables_preserved = $tables_filtered_l1;
-      $message = "Dumped the database to $file with minimal filtering.";
+      $message = "Dumped the database to $branch with minimal filtering.";
       break;
 
     default:
-      $tables_trashed = $tables_filtered;
+      $tables_cleared = $tables_filtered;
       $tables_preserved = array_merge($tables_filtered_l1,$tables_filtered_l2);
-      $message = "Dumped the database to $file with full filtering options.";
+      $message = "Dumped the database to $branch with full filtering options.";
       break;
   }
 
   $filter = '';
-  foreach($tables_trashed as $filtered_data) {
+  foreach($tables_cleared as $filtered_data) {
     $filter .= "|grep -v 'INSERT INTO .".$filtered_data.".' ";
   }
   foreach($tables_preserved as $preserved_data) {
@@ -437,7 +436,7 @@ function dbscripts_dump($file = 'development', $filter_option = 'full') {
     $message = "Empty data returned.  There may be a problem connecting to the database.";
     exec("rm $dump_path/temp");
   } else {
-    exec("mv $dump_path/temp $dump_path/$dump_file");
+    exec("mv $dump_path/temp $dump_location/db.sql");
   }
 
   // let the user know what happened
@@ -513,7 +512,7 @@ function dbscripts_erase($filter_option = 'full', $sequences = FALSE) {
 /**
  * Restore the database
  *
- * @param $file
+ * @param $branch
  *   File the database should be restored from.  Defaults to 'development'.
  *   Alternative options that are supported by default are 'production' and
  *   'last-merge'.  Other filename patterns may be used if you wish to restore
@@ -533,7 +532,7 @@ function dbscripts_erase($filter_option = 'full', $sequences = FALSE) {
  *   Set if sequences should be preserved or not.  This is a special case
  *   scenario that is only used during the merge function.
  */
-function dbscripts_restore($file = 'development', $filter_option = 'full', $sequences = FALSE) {
+function dbscripts_restore($branch = 'development', $filter_option = 'full', $sequences = FALSE) {
   require('config.inc');
 
   $db_connection_settings = dbscripts_db_connect();
@@ -542,20 +541,20 @@ function dbscripts_restore($file = 'development', $filter_option = 'full', $sequ
     exit;
   }
 
-  // Set the file to restore from
-  $dump_file = $file.'.sql';
+  // Set the location to restore from
+  $dump_location = "$dump_path/$branch";
 
-  // Check that the requested file exists
-  if (!file_exists("$dump_path/$dump_file")) {
-    return "\nThe file does not exist: $dump_path/$dump_file\n\n";
+  // Check that the requested location exists
+  if (!file_exists($dump_location)) {
+    return "\nThe path does not exist: $dump_location\n\n";
   }
 
   // If sequences need to be restored, we have to create a temp file
   $sequences_message = '';
   if ($sequences) {
     // Create a temp file with sequences striped out
-    exec("grep -v 'DROP TABLE IF EXISTS .sequences.;' $dump_path/$dump_file |sed 's/CREATE TABLE .sequences./CREATE TABLE IF NOT EXISTS `sequences`/g' |grep -v 'INSERT INTO .sequences. VALUES' > $dump_path/tmp/database.tmp");
-    $dump_file = '/tmp/database.tmp'; // reset dump_file to the temp version
+    exec("grep -v 'DROP TABLE IF EXISTS .sequences.;' $dump_location/db.sql |sed 's/CREATE TABLE .sequences./CREATE TABLE IF NOT EXISTS `sequences`/g' |grep -v 'INSERT INTO .sequences. VALUES' > $dump_path/database.tmp");
+    $dump_file = '/database.tmp'; // reset dump_file to the temp version
     $sequences_message = 'including sequences';
   }
 
@@ -578,11 +577,11 @@ function dbscripts_restore($file = 'development', $filter_option = 'full', $sequ
   }
 
   // Restore the database and let the user know what happened
-  exec("$mysql $db_connection_settings < $dump_path/$dump_file");
+  exec("$mysql $db_connection_settings < $dump_location/db.sql");
 
   // Erase the temp file if it was created
   if ($sequences) {
-    exec("rm $dump_path/tmp/database.tmp");
+    exec("rm $dump_path/database.tmp");
   }
 
   return "\n$message\n\n";
@@ -640,7 +639,7 @@ function dbscripts_merge($dev_db = 'development', $lastmerge_db = 'last-merge', 
 
   // Ensure tmp folder exists
   if (!file_exists($dump_path.'/tmp')) {
-    exec("mkdir $dump_path/tmp");
+    exec("mkdir -p $dump_path/tmp");
   }
 
   // After a conflict, the temp files would still exist

@@ -15,7 +15,7 @@ $script_path = './dbscripts';
 $settings_path = './sites/default';
 
 // Location where database dump files will be stored
-$file_path = './databases';
+$dump_path = './databases';
 
 // Location of mysql binaries (needs to be set if not in your path)
 $mysql = 'mysql';
