@@ -3,13 +3,8 @@
 /**
   TODO
 
-  Dump each table's schema as a file (table_name_schema)
-  Dump each table's data as a file (table_name_data)
-  Have flag to dump as single file, or restore from single file
-
-  Have a config setting to store sequences seperately by user
+  Readjust working space sequences to latest dev snapshot
   Grab sequences as last line of file?
-  Check if table auto increments next highest
 
   Merge by copying schema and data files for non-merge content
   Merge content as normal
@@ -420,18 +415,17 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   $special_tables = array_merge($tables_cleared,$tables_preserved);
   $tables_dumped = $table_list;
   foreach ($tables_dumped as $key => $table) {
-    // Since some tables are specified with a *, generating other possible values
+    // Since some tables are specified with a .*, generating other possible values
     $truncated = explode('_', $table);
     $truncated1 = isset($truncated[0]) ? $truncated[0].'_.*' : '';
     $truncated2 = isset($truncated[1]) ? $truncated[1].'_.*' : '';
 
     $check_tables = array($table, $truncated1, $truncated2);
     foreach ($check_tables as $check) {
-      if (in_array($check,$special_tables)) {
+      if (in_array($check, $special_tables)) {
         unset($tables_dumped[$key]); // remove the table if it exists in $special_tables
       }
     }
-
   }
 
   // These are all the special dump options that make the database diffable
@@ -441,11 +435,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   // Dump the structure of all tables
   if (exec("ls $temp_location")) exec("rm $temp_location/*");
   foreach ($table_list as $table) {
-    $filter ='';
-    if (in_array($table,$tables_preserved)) {
-    	$filter = "|grep -v 'DROP TABLE IF EXISTS' |sed 's/CREATE TABLE/CREATE TABLE IF NOT EXISTS/g'";
-    }
-  	exec("$mysqldump $dump_options --no-data $db_connection_settings --tables $table $filter > $temp_location/$table.sql");
+  	exec("$mysqldump $dump_options --no-data $db_connection_settings --tables $table > $temp_location/$table.sql");
   }
 
   // Check that a file actually has data, and stop if it doesn't
@@ -463,7 +453,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   foreach ($tables_dumped as $table) {
     exec("$mysqldump $dump_options --no-create-info $db_connection_settings --tables $table > $temp_location/$table.sql");
 
-    // if there's no data, then delete the file
+    // If there's no data, then delete the file
     $data = exec("grep 'INSERT INTO' $temp_location/$table.sql");
     if (!$data) {exec("rm $temp_location/$table.sql");}
   }
@@ -472,7 +462,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   if (exec("ls $dump_location/data")) exec("rm $dump_location/data/*");
   exec("mv $temp_location/* $dump_location/data");
 
-  // let the user know what happened
+  // Let the user know what happened
   return "\n$message\n\n";
 }
 
