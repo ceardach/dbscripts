@@ -82,11 +82,6 @@ function dbscripts_get_options($argv) {
       break;
   }
 
-  $options['sequences'] = FALSE;
-  if (in_array('sequences',$argv)) {
-    $options['sequences'] = TRUE;
-  }
-
   return $options;
 }
 
@@ -172,7 +167,7 @@ NAME
     Restore - database restore script
 
 SYNOPSIS
-    restore.php [file] [filter-option] [sequences]
+    restore.php [branch] [filter-option]
 
 EXAMPLE USAGE
     development: restore.php
@@ -213,11 +208,6 @@ OPTIONS
                 file.
         Defaults to: full
 
-    sequences
-        Set this option if sequences should be preserved within the MySQL
-        database.  This is a special case scenario that is only used during the
-        merge script.
-
 FILES
     {$script_path}/config.inc
         Configuration settings for customizing these scripts for your
@@ -244,7 +234,7 @@ NAME
   Erase - database erase script
 
 SYNOPSIS
-  erase.php [filter-option] [sequences]
+  erase.php [filter-option]
 
 EXAMPLE USAGE
     development: erase.php
@@ -271,11 +261,6 @@ OPTIONS
                 NO filtering is performed whatsoever.  The entire database will
                 be erased.
         Defaults to: full
-
-    sequences
-        Set this option if sequences should be preserved within the MySQL
-        database.  This is a spcial case scenario that is only used during the
-        merge script.
 
 FILES
     {$script_path}/config.inc
@@ -504,11 +489,8 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
  *       erasing a production database.
  *   'none' - NO filtering is performed whatsoever.  The entire database will be
  *       erased.
- * @param $sequences
- *   Set if sequences should be preserved or not.  This is a special case
- *   scenario that is only used during the merge function.
  */
-function dbscripts_erase($filter_option = 'full', $sequences = FALSE) {
+function dbscripts_erase($filter_option = 'full') {
   require('config.inc');
 
   $db_connection_settings = dbscripts_db_connect();
@@ -536,9 +518,6 @@ function dbscripts_erase($filter_option = 'full', $sequences = FALSE) {
   }
 
   $filter = '';
-  if ($sequences) {
-    $tables_preserved[] = 'sequences';
-  }
   foreach($tables_preserved as $preserved_data) {
     $filter .= "|grep -v 'DROP TABLE IF EXISTS .$preserved_data.;'";
   }
@@ -573,11 +552,8 @@ function dbscripts_erase($filter_option = 'full', $sequences = FALSE) {
  *       when restoring within a production environment.
  *   'none' - NO filtering is performed whatsoever.  The entire database is
  *       erased from MySQL and restored with the data from the given file.
- * @param $sequences
- *   Set if sequences should be preserved or not.  This is a special case
- *   scenario that is only used during the merge function.
  */
-function dbscripts_restore($branch = 'development', $filter_option = 'full', $sequences = FALSE) {
+function dbscripts_restore($branch = 'development', $filter_option = 'full') {
   require('config.inc');
 
   $db_connection_settings = dbscripts_db_connect();
@@ -592,15 +568,6 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full', $se
   // Check that the requested location exists
   if (!file_exists($dump_location)) {
     return "\nThe path does not exist: $dump_location\n\n";
-  }
-
-  // If sequences need to be restored, we have to create a temp file
-  $sequences_message = '';
-  if ($sequences) {
-    // Create a temp file with sequences striped out
-    exec("grep -v 'DROP TABLE IF EXISTS .sequences.;' $dump_location/db.sql |sed 's/CREATE TABLE .sequences./CREATE TABLE IF NOT EXISTS `sequences`/g' |grep -v 'INSERT INTO .sequences. VALUES' > $dump_path/database.tmp");
-    $dump_file = '/database.tmp'; // reset dump_file to the temp version
-    $sequences_message = 'including sequences';
   }
 
   // Erase the database so any tables that were removed stay removed
@@ -623,11 +590,6 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full', $se
 
   // Restore the database and let the user know what happened
   exec("$mysql $db_connection_settings < $dump_location/db.sql");
-
-  // Erase the temp file if it was created
-  if ($sequences) {
-    exec("rm $dump_path/database.tmp");
-  }
 
   return "\n$message\n\n";
 }
