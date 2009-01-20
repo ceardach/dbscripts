@@ -401,14 +401,18 @@ function dbscripts_table_increment($table, $branch) {
   $branch_location = "$dump_path/$branch";
 
   $increment = FALSE;
-  if (exec("grep AUTO_INCREMENT $branch_location/tables/$table.sql")) {
-    $string = exec("grep AUTO_INCREMENT $branch_location/tables/$table.sql");
-    $string_parts = explode(' ', $string);
-    foreach ($string_parts as $part) {
-      if (strpos($part, 'AUTO_INCREMENT') !== FALSE) {
-        $increment = str_replace('AUTO_INCREMENT=', '', $part);
+  if (exec("grep 'AUTO_INCREMENT=' $branch_location/tables/$table.sql")) {
+    $inc_string = exec("grep 'AUTO_INCREMENT=' $branch_location/tables/$table.sql");
+    $inc_string_parts = explode(' ', $inc_string);
+    foreach ($inc_string_parts as $part) {
+      if (strpos($part, 'AUTO_INCREMENT=') !== FALSE) {
+        $increment['num'] = str_replace('AUTO_INCREMENT=', '', $part);
       }
     }
+
+    $id_string = exec("grep auto_increment $branch_location/tables/$table.sql");
+    $id_string_parts = explode('`', $id_string);
+    $increment['id'] = $id_string_parts[1];
   }
 
   return $increment;
@@ -500,11 +504,29 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   // Dump the data of all tables we're tracking
   $tables_dumped = dbscripts_process_tables("workspace/last-dump", $tables_cleared);
   foreach ($tables_dumped as $table) {
-    exec("$mysqldump $dump_options --no-create-info $db_connection_settings --tables $table > $temp_location/$table.sql");
+    // get the table's increment both currently, and last-merge and compare
+    $increment_current = dbscripts_table_increment($table, 'workspace/last-dump');
+    $increment_lastmerge = dbscripts_table_increment($table, 'last-merge');
+
+    $new_data = FALSE;
+    if ($increment_current['num'] > $increment_lastmerge['num']) {
+    	$new_data = TRUE;
+    } elseif ($increment_current['num'] < $increment_lastmerge['num']) {
+    	$message .= "\n\nWARNING: Current AUTO_INCREMENT of table $table is lower than last-merge\n\n";
+    }
+
+    if ($new_data) {
+      exec("$mysqldump $dump_options --no-create-info $db_connection_settings --where='{$increment_lastmerge['id']}<{$increment_lastmerge['num']}' --tables $table > $temp_location/$table.sql");
+      exec("$mysqldump $dump_options --no-create-info $db_connection_settings --where='{$increment_lastmerge['id']}>={$increment_lastmerge['num']}' --tables $table > $temp_location/$table-new.sql");
+    } else {
+      exec("$mysqldump $dump_options --no-create-info $db_connection_settings --tables $table > $temp_location/$table.sql");
+    }
 
     // If there's no data, then delete the file
-    $data = exec("grep 'INSERT INTO' $temp_location/$table.sql");
-    if (!$data) {exec("rm $temp_location/$table.sql");}
+    if (!exec("grep 'INSERT INTO' $temp_location/$table.sql")) {exec("rm $temp_location/$table.sql");}
+    if (file_exists("$temp_location/$table-new.sql")) {
+      if (!exec("grep 'INSERT INTO' $temp_location/$table-new.sql")) exec("rm $temp_location/$table-new.sql");
+    }
   }
 
   // Move the data files to the working space's last dump
@@ -641,6 +663,7 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
   foreach ($tables_restored as $table) {
     if (file_exists("$dump_location/tables/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/tables/$table.sql");
     if (file_exists("$dump_location/data/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/data/$table.sql");
+    if (file_exists("$dump_location/data/$table-new.sql")) exec("$mysql $db_connection_settings < $dump_location/data/$table-new.sql");
   }
 
   // Move what was restored to the working space
