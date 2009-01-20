@@ -396,29 +396,38 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
     exec("mkdir -p $dump_location");
   }
 
+  // Create an array of all tables in the database and store it
+  exec("echo '<?php' > $dump_location/table_list.php");
+  exec('echo \'$table_list = array(\' >> '.$dump_location.'/table_list.php');
+  exec("$mysqldump --add-drop-table --no-data $db_connection_settings | grep 'DROP TABLE' | sed -e \"s/DROP TABLE IF EXISTS ./  '/g\" -e \"s/.;/',/g\" >> $dump_location/table_list.php");
+  exec("echo ');' >> $dump_location/table_list.php");
+
+  // Now lets load this array of tables and use it
+  require("$dump_location/table_list.php");
+
   // Set the filtering options and message to be presented to the user
   switch($filter_option){
     case 'none':
-      $tables_trashed = array();
+      $tables_cleared = array();
       $tables_preserved = array();
       $message = "Performed a full database dump to $branch.";
       break;
 
     case 'min':
-      $tables_trashed = $tables_filtered;
+      $tables_cleared = $tables_filtered;
       $tables_preserved = $tables_filtered_l1;
       $message = "Dumped the database to $branch with minimal filtering.";
       break;
 
     default:
-      $tables_trashed = $tables_filtered;
+      $tables_cleared = $tables_filtered;
       $tables_preserved = array_merge($tables_filtered_l1,$tables_filtered_l2);
       $message = "Dumped the database to $branch with full filtering options.";
       break;
   }
 
   $filter = '';
-  foreach($tables_trashed as $filtered_data) {
+  foreach($tables_cleared as $filtered_data) {
     $filter .= "|grep -v 'INSERT INTO .".$filtered_data.".' ";
   }
   foreach($tables_preserved as $preserved_data) {
