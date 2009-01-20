@@ -2,16 +2,21 @@
 
 /**
   TODO
-
-  Readjust working space sequences to latest dev snapshot
+  
+  Dump each table's schema as a file (table_name_schema)
+  Dump each table's data as a file (table_name_data)
+  Have flag to dump as single file, or restore from single file
+  
+  Have a config setting to store sequences seperately by user
   Grab sequences as last line of file?
-
+  Check if table auto increments next highest
+  
   Merge by copying schema and data files for non-merge content
   Merge content as normal
   Restore&Dump only modified/merged tables
     check diff, and flag to be restored and dumped
     (Double check if this is still nessisary if data files are seperate)
-
+  
   Have script to complete merge process after conflict (merge.php finish)
 **/
 
@@ -21,7 +26,7 @@
 function dbscripts_db_connect() {
   require('config.inc');
   require("$settings_path/settings.php");
-
+  
   preg_match('/'.$dbtype.':\/\/([^:]+):([^@]+)@([^\/]+)\/(.+)/', $db_url, $db_settings);
 
   if (empty($db_settings)) {
@@ -54,7 +59,7 @@ function dbscripts_get_options($argv) {
   } else {
     $use_default = TRUE;
   }
-
+  
   if ($use_default) {
     $options['file'] = 'development';
     $filter_options = isset($argv[1]) ? $argv[1] : '';
@@ -62,19 +67,24 @@ function dbscripts_get_options($argv) {
     $options['file'] = $argv[1];
     $filter_options = isset($argv[2]) ? $argv[2] : '';
   }
-
+  
   switch ($filter_options) {
     case 'min':
     $options['filter'] = 'min';
       break;
-
+    
     case 'none':
       $options['filter'] = 'none';
       break;
-
+    
     default:
       $options['filter'] = 'full';
       break;
+  }
+
+  $options['sequences'] = FALSE;
+  if (in_array('sequences',$argv)) {
+    $options['sequences'] = TRUE;
   }
 
   return $options;
@@ -100,7 +110,7 @@ NAME
     Dump - database dump script
 
 SYNOPSIS
-    dump.php [branch] [filter-option]
+    dump.php [dump-file] [filter-option]
 
 EXAMPLE USAGE
     development: dump.php
@@ -108,18 +118,18 @@ EXAMPLE USAGE
     last merge:  dump.php last-merge
 
 DESCRIPTION
-    Dump the database from MySQL to a given branch of dump files.  The dump is
-    'diffable' allowing it to be under version control.  Filtering options are
-    performed to avoid dumping data that is not nessisary to be stored from
-    development and production environments.
+    Dump the database from MySQL to a given file.  The dump is 'diffable'
+    allowing it to be under version control.  Filtering options are performed
+    to avoid dumping data that is not nessisary to be stored from development 
+    and production environments.
 
 OPTIONS
-    branch
-        Branch the database should be dumped to.  Default options are
-        'development', 'production' and 'last-merge'.  Other naming patterns
-        may be used if you wish to dump the database to an alternate location.
+    dump-file
+        File the database should be dumped to.  Default options are
+        'development', 'production' and 'last-merge'.  Other filename patterns
+        may be used if you wish to dump the database to an alternat location.
         Relative to: {$file_path}
-        Defaults to: {$file_path}/development
+        Defaults to: {$file_path}/development.sql
 
     filter-option
         The level of filtering that should be performed during the dump.
@@ -150,8 +160,6 @@ SEE ALSO
         http://drupal.org/node/232151
     dump documentation
         http://drupal.org/node/232153
-
-    Online ocumentation is not up-to-date for the 2.x version
 \n
 EOF;
       break;
@@ -164,7 +172,7 @@ NAME
     Restore - database restore script
 
 SYNOPSIS
-    restore.php [branch] [filter-option]
+    restore.php [file] [filter-option] [sequences]
 
 EXAMPLE USAGE
     development: restore.php
@@ -172,19 +180,19 @@ EXAMPLE USAGE
     last merge:  restore.php last-merge
 
 DESCRIPTION
-    Restores the database from a given branch.  Filtering options are performed
+    Restores the database from a given file.  Filtering options are performed
     to prevent certain data from being lost in the MySQL database in
     development and production environments.  Also performs the 'erase' script
     to ensure that any tables removed in development are removed when performing
     a restore.
 
 OPTIONS
-    branch
-        The branch the database should be restored from.  Default options are
-        'development', 'production' and 'last-merge'.  Other naming patterns
-        may be used if you wish to restore the database from an alternate branch.
+    file
+        The file the database should be restored from.  Default options are
+        'development', 'production' and 'last-merge'.  Other filename patterns
+        may be used if you wish to restore the database from an alternate file.
         Relative to: {$file_path}
-        Defaults to: {$file_path}/development
+        Defaults to: {$file_path}/development.sql
 
     filter-option
         The level of filtering that should be performed during the restore to
@@ -195,7 +203,7 @@ OPTIONS
                 cache data.  Recommended to use this when restoring within a
                 development environment.
             min
-                Preserves only a select minimum of data currently residing
+                Preserves only a select minimum of data currently residing 
                 within the MySQL database.  Most useful for preserving sessions
                 and cache data.  Recommended to use this when restoring within a
                 production environment.
@@ -204,6 +212,11 @@ OPTIONS
                 erased from MySQL and restored with only the data from the given
                 file.
         Defaults to: full
+
+    sequences
+        Set this option if sequences should be preserved within the MySQL
+        database.  This is a special case scenario that is only used during the
+        merge script.
 
 FILES
     {$script_path}/config.inc
@@ -219,8 +232,6 @@ SEE ALSO
         http://drupal.org/node/232151
     restore and erase documentation
         http://drupal.org/node/232154
-
-    Online ocumentation is not up-to-date for the 2.x version
 \n
 EOF;
       break;
@@ -233,7 +244,7 @@ NAME
   Erase - database erase script
 
 SYNOPSIS
-  erase.php [filter-option]
+  erase.php [filter-option] [sequences]
 
 EXAMPLE USAGE
     development: erase.php
@@ -261,6 +272,11 @@ OPTIONS
                 be erased.
         Defaults to: full
 
+    sequences
+        Set this option if sequences should be preserved within the MySQL
+        database.  This is a spcial case scenario that is only used during the 
+        merge script.
+        
 FILES
     {$script_path}/config.inc
         Configuration settings for customizing these scripts for your
@@ -273,10 +289,8 @@ AUTHOR
 SEE ALSO
     dbscripts documentation
         http://drupal.org/node/232151
-    restore and erase documentation
+    merge documentation
         http://drupal.org/node/232154
-
-    Online ocumentation is not up-to-date for the 2.x version
 \n
 EOF;
       break;
@@ -288,7 +302,7 @@ NAME
     Merge - database merge script
 
 SYNOPSIS
-    merge.php [dev-branch] [last-merge-branch] [prod-branch]
+    merge.php [dev-db] [last-merge-db] [prod-db]
 
 EXAMPLE USAGE
     default: merge.php
@@ -297,28 +311,28 @@ DESCRIPTION
     Merge a development and production database together.
 
 OPTIONS
-    dev-branch
-        The location of the database branch used for development.  Only configuration
-        and content changes will be preserved from this file.  All user data
+    dev-db
+        The location of the database file used for development.  Only configuration
+        and content changes will be preserved from this file.  All user data 
         will be lost.
         Relative to: {$file_path}
-        Defaults to: {$file_path}/development
+        Defaults to: {$file_path}/development.sql
 
-    last-merge-branch
-        The location of the database branch that was used to represent the state
-        the last time both production development were merged.  This is
-        important to be able to track the difference between an addition and a
+    last-merge-db
+        The location of the database file that was used to represent the state
+        the last time both production development were merged.  This is 
+        important to be able to track the difference between an addition and a 
         subtraction.
         Relative to: {$file_path}
-        Defaults to: {$file_path}/last-merge
+        Defaults to: {$file_path}/last-merge.sql
 
-    prod-branch
-        The location of the database branch used for production.  Only content and
-        user data will be preserved from this branch.  All other data will be
+    prod-db
+        The location of the database file used for production.  Only content and
+        user data will be preserved from this file.  All other data will be 
         lost.
         Relative to: {$file_path}
-        defaults to: {$file_path}/production
-
+        defaults to: {$file_path}/production.sql
+        
 FILES
     {$script_path}/config.inc
         Configuration settings for customizing these scripts for your
@@ -333,8 +347,6 @@ SEE ALSO
         http://drupal.org/node/232151
     merge documentation
         http://drupal.org/node/232155
-
-    Online ocumentation is not up-to-date for the 2.x version
 \n
 EOF;
       break;
@@ -349,194 +361,128 @@ EOF;
 
 
 /**
- * Process an array of tables
- *
- * When given an array of all tables, you can either remove matches
- * from the table list, or pick only positive matches
- *
- * @param $branch
- *    Which branch should be use for its list of tables
- * @param $tables_compare
- *    An array of table names that should be compared
- * @param $remove_match
- *    Should matches in $tables_compare be removed from the list, or kept
- */
-function dbscripts_process_tables($branch, $tables_compare, $remove_match = TRUE) {
-  require('config.inc');
-
-  $tables = file("$dump_path/$branch/table_list.txt", FILE_IGNORE_NEW_LINES);
-
-  foreach ($tables as $key => $table) {
-    // Since some tables are specified with a .*, generating other possible values
-    $truncated = explode('_', $table);
-    $truncated1 = isset($truncated[0]) ? $truncated[0].'_.*' : '';
-    $truncated2 = isset($truncated[1]) ? $truncated[0].'_'.$truncated[1].'_.*' : '';
-
-    $check_tables = array($table, $truncated1, $truncated2);
-    foreach ($check_tables as $check) {
-      if (in_array($check, $tables_compare)) {
-        $tables_match[$key] = $table;
-      }
-    }
-  }
-
-  foreach ($tables_match as $key => $table) {
-    unset($tables[$key]);
-  }
-
-  if ($remove_match) {
-    return $tables;
-  } else {
-  	return $tables_match;
-  }
-}
-
-
-/**
  * Dump the database
  *
- * @param $branch
- *   Branch that the database should be dumped to.  Defaults to 'development'.
+ * @param $file
+ *   File the database should be dumped to.  Defaults to 'development'.
  *   Alternative options that are supported by default are 'production' and
- *   'last-merge'.  Other string patterns may be used if you wish to dump the
+ *   'last-merge'.  Other filename patterns may be used if you wish to dump the
  *   the database to an alternate location.
  * @param $filter_option
  *   Choose what level of filtering should be performed during the dump.  Filter
  *   levels are configured in config.inc
  *   'full' - Default option.  Removes the full option of data from the dump.
- *       Most useful for removing user, sessions and cache data.  Use this when
+ *       Most useful for removing user, sessions and cache data.  Use this when 
  *       dumping a development database.
  *   'min' - Removes only a select minimum of data from the dump.  Most useful
- *       for removing sessions and cache data.  Use this when dumping a
+ *       for removing sessions and cache data.  Use this when dumping a 
  *       production database.
  *   'none' - NO filtering is performed whatsoever.  The entire database is
- *       dumped.
+ *       dumped to the given file.
  */
-function dbscripts_dump($branch = 'development', $filter_option = 'full') {
+function dbscripts_dump($file = 'development', $filter_option = 'full') {
   require('config.inc');
-
+  
   $db_connection_settings = dbscripts_db_connect();
   if (!$db_connection_settings) {
     return "\nImproper database connection settings.\n\n";
+    exit;
   }
 
-  $dump_location = "$dump_path/$branch";
-  $temp_location = "$dump_path/tmp";
-
-  // Creating required folders
-  if (!file_exists($temp_location)) {exec("mkdir -p $temp_location");}
-  if (!file_exists($dump_location)) {exec("mkdir -p $dump_location");}
-  if (!file_exists("$dump_location/data")) {exec("mkdir -p $dump_location/data");}
-  if (!file_exists("$dump_location/tables")) {exec("mkdir -p $dump_location/tables");}
-
-  // Create an array of all tables in the database and store it
-  exec("$mysqldump --add-drop-table --no-data $db_connection_settings | grep 'DROP TABLE' | sed -e \"s/DROP TABLE IF EXISTS .//g\" -e \"s/.;//g\" > $dump_location/table_list.txt");
-  $table_list = file("$dump_location/table_list.txt", FILE_IGNORE_NEW_LINES);
+  // Set the file to dump to
+  $dump_file = $file.'.sql';
+  
+  // Create the dump location if it doesn't exist
+  if(!file_exists($file_path)) {
+    exec("mkdir $file_path");
+  }
 
   // Set the filtering options and message to be presented to the user
-  $tables_cleared = array();
-  $tables_preserved = array();
   switch($filter_option){
     case 'none':
-      $message = "Performed a full database dump to $branch.";
+      $tables_trashed = array();
+      $tables_preserved = array();
+      $message = "Performed a full database dump to $dump_file.";
       break;
 
     case 'min':
-      $tables_cleared = array_merge($tables_filtered, $tables_filtered_l1);
-      $message = "Dumped the database to $branch with minimal filtering.";
+      $tables_trashed = $tables_filtered;
+      $tables_preserved = $tables_filtered_l1;
+      $message = "Dumped the database to $file with minimal filtering.";
       break;
 
     default:
-      $tables_cleared = array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2);
-      $message = "Dumped the database to $branch with full filtering options.";
+      $tables_trashed = $tables_filtered;
+      $tables_preserved = array_merge($tables_filtered_l1,$tables_filtered_l2);
+      $message = "Dumped the database to $file with full filtering options.";
       break;
+  }
+  
+  $filter = '';
+  foreach($tables_trashed as $filtered_data) {
+    $filter .= "|grep -v 'INSERT INTO .".$filtered_data.".' ";
+  }
+  foreach($tables_preserved as $preserved_data) {
+    $filter .= "|grep -v 'DROP TABLE IF EXISTS .".$preserved_data.".;' |sed 's/CREATE TABLE .".$preserved_data."./CREATE TABLE IF NOT EXISTS `".$preserved_data."`/g' |grep -v 'INSERT INTO .".$preserved_data.".' ";
   }
 
   // These are all the special dump options that make the database diffable
-  // and preserve character set
-  $dump_options = "--skip-opt --add-drop-table --add-locks --create-options --quick --lock-tables --set-charset --disable-keys --order-by-primary --skip-comments --comments=FALSE --default-character-set=utf8 --character-sets-dir=$charsets --hex-blob";
+  $dump_options = "--skip-opt --add-drop-table --add-locks --create-options --quick --lock-tables --set-charset --disable-keys --order-by-primary --comments=FALSE --default-character-set=utf8 --character-sets-dir=$charsets --hex-blob";
 
-  // Dump the structure of all tables
-  if (exec("ls $temp_location")) exec("rm -r $temp_location/*");
-  foreach ($table_list as $table) {
-  	exec("$mysqldump $dump_options --no-data $db_connection_settings --tables $table > $temp_location/$table.sql");
+  // and finally, lets dump the database to a temporary file
+  exec("$mysqldump $dump_options $db_connection_settings $filter > $file_path/temp");
 
-    // We want the current auto_increment value to be easily accessible
-    if (exec("grep AUTO_INCREMENT $temp_location/$table.sql")) {
-    	$string = exec("grep AUTO_INCREMENT $temp_location/$table.sql");
-      $string_parts = explode(' ', $string);
-      foreach ($string_parts as $part) {
-      	if (strpos($part, 'AUTO_INCREMENT') !== FALSE) {
-      		$current_increment = str_replace('AUTO_INCREMENT=', '', $part);
-      	}
-      }
-      exec("echo $current_increment > $temp_location/{$table}-increment.txt");
-    }
+  // check that the file actually has data
+  if (file_get_contents("$file_path/temp") == '') {
+    $message = "Empty data returned.  There may be a problem connecting to the database.";
+    exec("rm $file_path/temp");
+  } else {
+    exec("mv $file_path/temp $file_path/$dump_file");
   }
 
-  // Check that a file actually has data, and stop if it doesn't
-  if (file_get_contents("$temp_location/$table_list[0].sql") == '') {
-    exec("rm $temp_location/*");
-    return "\nEmpty data returned.  There may be a problem connecting to the database.\n\n";
-  }
-
-  // Move the table files from the temp directory
-  if (exec("ls $dump_location/tables")) exec("rm $dump_location/tables/*");
-  exec("mv $temp_location/* $dump_location/tables");
-
-  // Dump the data of all tables we're tracking
-  $tables_dumped = dbscripts_process_tables($branch, $tables_cleared);
-  foreach ($tables_dumped as $table) {
-    exec("$mysqldump $dump_options --no-create-info $db_connection_settings --tables $table > $temp_location/$table.sql");
-
-    // If there's no data, then delete the file
-    $data = exec("grep 'INSERT INTO' $temp_location/$table.sql");
-    if (!$data) {exec("rm $temp_location/$table.sql");}
-  }
-
-  // Move the data files from the temp directory
-  if (exec("ls $dump_location/data")) exec("rm $dump_location/data/*");
-  exec("mv $temp_location/* $dump_location/data");
-
-  // Let the user know what happened
+  // let the user know what happened
   return "\n$message\n\n";
 }
 
 
-/**
+/*
  * Erase the database
  *
  * @param $filter_option
- *   Choose what level of filtering should be performed while erasing the
+ *   Choose what level of filtering should be performed while erasing the 
  *   database.  Filter levels are configured in config.inc.  Any options set to
  *   be filtered will be subsequently PRESERVED in the database, and not erased.
  *   'full' - Default option.  Preserves the full option of data from the dump.
- *       Most useful for keeping user, sessions and cache data.  Use this when
+ *       Most useful for keeping user, sessions and cache data.  Use this when 
  *       erasing a development database.
  *   'min' - Preserves only a select minimum of data from the dump.  Most useful
- *       for keeping sessions data so you don't get logged out.  Use this when
+ *       for keeping sessions data so you don't get logged out.  Use this when 
  *       erasing a production database.
  *   'none' - NO filtering is performed whatsoever.  The entire database will be
  *       erased.
+ * @param $sequences
+ *   Set if sequences should be preserved or not.  This is a special case
+ *   scenario that is only used during the merge function.
  */
-function dbscripts_erase($filter_option = 'full') {
+function dbscripts_erase($filter_option = 'full', $sequences = FALSE) {
   require('config.inc');
-
+  
   $db_connection_settings = dbscripts_db_connect();
   if (!$db_connection_settings) {
     return "\nImproper database connection settings.\n\n";
+    exit;
   }
 
   // Set the filtering options and message to be presented to the user
-  $tables_preserved = array();
   switch ($filter_option) {
-    case 'none';
-      $message = "Erased the entire database.";
-      break;
-
     case 'min':
       $tables_preserved = $tables_filtered_l1;
       $message = "Erased the database, except for minimal preserved tables.";
+      break;
+
+    case 'none';
+      $tables_preserved = array();
+      $message = "Erased the entire database.";
       break;
 
     default:
@@ -546,6 +492,9 @@ function dbscripts_erase($filter_option = 'full') {
   }
 
   $filter = '';
+  if ($sequences) {
+    $tables_preserved[] = 'sequences';
+  }
   foreach($tables_preserved as $preserved_data) {
     $filter .= "|grep -v 'DROP TABLE IF EXISTS .$preserved_data.;'";
   }
@@ -564,65 +513,76 @@ function dbscripts_erase($filter_option = 'full') {
 /**
  * Restore the database
  *
- * @param $branch
+ * @param $file
  *   File the database should be restored from.  Defaults to 'development'.
  *   Alternative options that are supported by default are 'production' and
- *   'last-merge'.  Other filename patterns may be used if you wish to restore
+ *   'last-merge'.  Other filename patterns may be used if you wish to restore 
  *   the database from an alternate location.
  * @param $filter_option
- *   Choose what level of filtering should be performed during the restoration.
+ *   Choose what level of filtering should be performed during the restoration.  
  *   Filter levels are configured in config.inc
  *   'full' - Default option.  Preserves the full option of data currently
- *       residing within MySQL. Most useful for preserving user, sessions and
+ *       residing within MySQL. Most useful for preserving user, sessions and 
  *       cache data.  Use this when restoring within a development environment.
  *   'min' - Preserves only a select minimum of data currently residing within
- *       MySQL.  Most useful for preserving sessions and cache data.  Use this
+ *       MySQL.  Most useful for preserving sessions and cache data.  Use this 
  *       when restoring within a production environment.
  *   'none' - NO filtering is performed whatsoever.  The entire database is
  *       erased from MySQL and restored with the data from the given file.
+ * @param $sequences
+ *   Set if sequences should be preserved or not.  This is a special case
+ *   scenario that is only used during the merge function.
  */
-function dbscripts_restore($branch = 'development', $filter_option = 'full') {
+function dbscripts_restore($file = 'development', $filter_option = 'full', $sequences = FALSE) {
   require('config.inc');
-
+  
   $db_connection_settings = dbscripts_db_connect();
   if (!$db_connection_settings) {
     return "\nImproper database connection settings.\n\n";
+    exit;
   }
 
-  // Set the location to restore from
-  $dump_location = "$dump_path/$branch";
+  // Set the file to restore from
+  $dump_file = $file.'.sql';
 
-  // Check that the requested location exists
-  if (!file_exists($dump_location)) {
-    return "\nThe path does not exist: $dump_location\n\n";
+  // Check that the requested file exists
+  if (!file_exists("$file_path/$dump_file")) {
+    return "\nThe file does not exist: $file_path/$dump_file\n\n";
   }
 
-  // Set behavior depending on filter
-  $tables_preserved = array();
-  switch($filter_option){
-    case 'none':
-      $message = "Restored the full database";
-      break;
-
-    case 'min':
-      $tables_preserved = $tables_filtered_l1;
-      $message = "Restored the database perserving minimal tables";
-      break;
-
-    default:
-      $tables_preserved = array_merge($tables_filtered_l1,$tables_filtered_l2);
-      $message = "Restored the database preserving the full option of tables";
-      break;
+  // If sequences need to be restored, we have to create a temp file
+  $sequences_message = '';
+  if ($sequences) {
+    // Create a temp file with sequences striped out
+    exec("grep -v 'DROP TABLE IF EXISTS .sequences.;' $file_path/$dump_file |sed 's/CREATE TABLE .sequences./CREATE TABLE IF NOT EXISTS `sequences`/g' |grep -v 'INSERT INTO .sequences. VALUES' > $file_path/tmp/database.tmp");
+    $dump_file = '/tmp/database.tmp'; // reset dump_file to the temp version
+    $sequences_message = 'including sequences';
   }
 
   // Erase the database so any tables that were removed stay removed
-  dbscripts_erase($filter_option);
+  dbscripts_erase($filter_option,$sequences);
+  
+  // Set the message
+  switch($filter_option){
+    case 'none':
+      $message = "Restored the full database $sequences_message";
+      break;
 
-  // Restore each database file
-  $tables_restored = dbscripts_process_tables($branch, $tables_preserved);
-  foreach ($tables_restored as $table) {
-    if (file_exists("$dump_location/tables/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/tables/$table.sql");
-    if (file_exists("$dump_location/data/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/data/$table.sql");
+    case 'min':
+      $message = "Restored the database perserving minimal tables $sequences_message";
+      break;
+
+    default:
+      $message = "Restored the database preserving the full option of tables $sequences_message";
+      break;
+  }
+
+  // Restore the database and let the user know what happened
+  exec("$mysql $db_connection_settings < $file_path/$dump_file");
+
+  // Erase the temp file if it was created
+  if ($sequences) {
+    exec("rm $file_path/tmp/database.tmp");
   }
 
   return "\n$message\n\n";
@@ -635,96 +595,206 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
  * You really only need to set the following parameters for expert use.
  * Otherwise this function can be run with no options.
  *
- * @param $dev_branch
+ * @param $dev_db
  *   Location of the database file that was used for 'development'.  Only
  *   configuration and content changes will be preserved.  All user data will
  *   be lost.
- * @param $lastmerge_branch
- *   Location of the database file that was used to represent the state the
+ * @param $lastmerge_db
+ *   Location of the database file that was used to represent the state the 
  *   last time both production and development were merged.  This is important
  *   to be able to track the difference between an addition and a subtraction.
- * @param $prod_branch
+ * @param $prod_db
  *   Location of the database file that is used as 'production'.  Only content
  *   and user data will be perserved.  All other data will be lost.
  */
-function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-merge', $prod_branch = 'production') {
+function dbscripts_merge($dev_db = 'development', $lastmerge_db = 'last-merge', $prod_db = 'production') {
   require('config.inc');
-
-  $message = "WARNING: This merge only merges tables, not data\n\n";
-
-  // If empty data gets sent through, reset it to defaults
-  if (!$dev_branch) $dev_branch = 'development';
-  if (!$lastmerge_branch) $lastmerge_branch = 'last-merge';
-  if (!$prod_branch) $prod_branch = 'production';
-
-  // Set all locations
-  $temp_location = "$dump_path/tmp";
-  $dev_location = "$dump_path/$dev_branch";
-  $lastmerge_location = "$dump_path/$lastmerge_branch";
-  $prod_location = "$dump_path/$prod_branch";
-  $merge_location = "$temp_location/merge";
-
-  // Ensure all the branches exist
-  $missing_branch = '';
-  if (!file_exists($dev_location)) $missing_branch .= $dev_branch.' ';
-  if (!file_exists($lastmerge_location)) $missing_branch .= $lastmerge_branch.' ';
-  if (!file_exists($prod_location)) $missing_branch .= $prod_branch.' ';
-
-  // Cancel merge if all branches do not exist
-  if ($missing_branch) {
-    return "\nMissing database files for merge: $missing_branch\n\n";
+  
+  // If empty data gets sent through, reset it
+  if (!$dev_db) {
+    $dev_db = 'development';
   }
-
+  if (!$lastmerge_db) {
+    $lastmerge_db = 'last-merge';
+  }
+  if (!$prod_db) {
+    $prod_db = 'production';
+  }
+  
+  // Ensure all the files exist
+  $missing_db = '';
+  if (!file_exists("$file_path/$dev_db.sql")) {
+    $missing_db .= $dev_db.'.sql ';
+  }
+  if (!file_exists("$file_path/$lastmerge_db.sql")) {
+    $missing_db .= $lastmerge_db.'.sql ';
+  }
+  if (!file_exists("$file_path/$prod_db.sql")) {
+    $missing_db .= $prod_db.'.sql ';
+  }
+  
+  // Cancel merge if all files do not exist
+  if ($missing_db) {
+    return "\nMissing database files for merge: $missing_db\n\n";
+  }
+  
   // Ensure tmp folder exists
-  if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
-
-  // After a conflict, the temp files would still exist, so delete them
-  if (exec("ls $temp_location")) exec("rm -r $temp_location/*");
-
-  // Creating merge folders
-  if (!file_exists($merge_location)) exec("mkdir -p $merge_location/tables $merge_location/data");
-
-  // Define the tables
-  $tables_content = dbscripts_process_tables($dev_branch, $tables_merge, FALSE);
-  $tables_prod = dbscripts_process_tables($prod_branch, $tables_override, FALSE);
-  $tables_dev = dbscripts_process_tables($dev_branch, array_merge($tables_merge, $tables_override));
-
-  // Move all development tables and data to the temp merge location
-  foreach ($tables_dev as $table) {
-  	if (file_exists("$dev_location/tables/$table.sql")) exec("cp $dev_location/tables/$table.sql $merge_location/tables");
-    if (file_exists("$dev_location/data/$table.sql")) exec("cp $dev_location/data/$table.sql $merge_location/data");
+  if (!file_exists($file_path.'/tmp')) {
+    exec("mkdir $file_path/tmp");
+  }
+  
+  // After a conflict, the temp files would still exist
+  if(file_exists("$file_path/tmp/data_merged.sql")){ 
+    exec("rm $file_path/tmp/*"); 
   }
 
-  // Move all the production tables and data to the temp merge location
-  foreach ($tables_prod as $table) {
-    if (file_exists("$prod_location/tables/$table.sql")) exec("cp $prod_location/tables/$table.sql $merge_location/tables");
-    if (file_exists("$prod_location/data/$table.sql")) exec("cp $prod_location/data/$table.sql $merge_location/data");
+  // Adding status indicators, because when it takes 15 minutes, it's nice to
+  // know where you're at in the process.
+  print "\nRestoring production database..."; 
+
+  // To store production sequences, the full original production version of the 
+  // database will be loaded into MySQL.
+  dbscripts_restore($prod_db,'min');
+  
+  print " Done.";
+
+  //Set up ability to strip data from tables
+  $strip_merge = '';
+  foreach($tables_merge as $table){ 
+    $strip_content .= "|grep -v 'INSERT INTO .".$table.". VALUES' ";
+  }
+  $strip_override = '';
+  foreach($tables_override as $table){ 
+    $strip_users .= "|grep -v 'INSERT INTO .".$table.". VALUES' "; 
   }
 
-  // Since we do not have real merging, also move all production content data to temp merge location
-  foreach ($tables_content as $table) {
-    if (file_exists("$prod_location/tables/$table.sql")) exec("cp $prod_location/tables/$table.sql $merge_location/tables");
-    if (file_exists("$prod_location/data/$table.sql")) exec("cp $prod_location/data/$table.sql $merge_location/data");
+  // Set up ability to strip SQL comments
+  $strip_comment = '';
+  foreach($sql_comment_unset as $comment){ 
+    $strip_comment .= "|grep -v '".$comment."' "; 
   }
 
-  // Copy this new merged version to all three branches
-  exec("rm $dev_location/tables/* $dev_location/data/* $lastmerge_location/tables/* $lastmerge_location/data/* $prod_location/tables/* $prod_location/data/*");
-  exec("cp $merge_location/tables/* $dev_location/tables");
-  exec("cp $merge_location/tables/* $lastmerge_location/tables");
-  exec("cp $merge_location/tables/* $prod_location/tables");
-  exec("cp $merge_location/data/* $prod_location/data");
-
-  // Dev and last-merge do not need to be bothered with all the data
-  $tables_dev_data = dbscripts_process_tables($dev_branch, array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2));
-  foreach ($tables_dev_data as $table) {
-  	if (file_exists("$merge_location/data/$table.sql")) exec("cp $merge_location/data/$table.sql $dev_location/data");
+  // To ensure that the newly merged databases get imported into the database
+  // correctly, tables that were modified to not be dropped in development, 
+  // need to be reversed
+  $reverse_filter = '';
+  $tables_preserved = array_merge($tables_filtered_l1,$tables_filtered_l2);
+  foreach($tables_preserved as $table) {
+    $reverse_filter .= "|sed 's/CREATE TABLE IF NOT EXISTS .".$table.". (/DROP TABLE IF EXISTS `".$table."`; CREATE TABLE `".$table."` (/g' ";
   }
-  exec("cp $dev_location/data/* $lastmerge_location/data");
 
-  $message .= "Merge was successfull.";
+  print "\n\nPreparing temporary files...";
 
-  // Clear temp
-  exec("rm -r $temp_location/*");
+  // Take development database and strip it of content and user data to 
+  // create a skeleton to work from (skeleton.sql)
+  exec("cat $file_path/$dev_db.sql $strip_merge $strip_override $strip_comment $reverse_filter > $file_path/tmp/skeleton.sql");
+  print "."; // ghetto status indicators
 
-  return "\n$message\n\n";
+  // copy skeleton to where we'll be building the newly merged database
+  exec("cp $file_path/tmp/skeleton.sql $file_path/tmp/merged_database.sql");
+  print ".";
+
+  //Add production user data to start building the newly merged database
+  foreach($tables_override as $table){
+    exec("grep 'INSERT INTO .".$table.". VALUES' $file_path/$prod_db.sql >> $file_path/tmp/data_user.sql");
+    print ".";
+  }
+  exec("cat $file_path/tmp/data_user.sql >> $file_path/tmp/merged_database.sql");
+  print ".";
+
+  // Grab data from production, development and merged databases
+  // Strip auto increment table sequences to avoid conflicts
+  if(file_exists("$file_path/tmp/data_dev.sql")){ exec("rm $file_path/tmp/data_dev.sql"); }
+  if(file_exists("$file_path/tmp/data_prod.sql")){ exec("rm $file_path/tmp/data_prod.sql"); }
+  if(file_exists("$file_path/tmp/data_lastmerge.sql")){ exec("rm $file_path/tmp/data_lastmerge.sql"); }
+
+  foreach($tables_merge as $table){
+    exec("grep 'INSERT INTO .".$table.". VALUES' $file_path/$dev_db.sql $strip_increment >> $file_path/tmp/data_dev.sql");
+    print ".";
+    exec("grep 'INSERT INTO .".$table.". VALUES' $file_path/$prod_db.sql $strip_increment >> $file_path/tmp/data_prod.sql");
+    print ".";
+    exec("grep 'INSERT INTO .".$table.". VALUES' $file_path/$lastmerge_db.sql $strip_increment >> $file_path/tmp/data_lastmerge.sql");
+    print ".";
+  }
+
+  // Create a new merged version of data (this step takes awhile)
+  // NOTE: requires GNU diff3
+  print " Done.  \n\nPerforming merge of data...";
+  exec("diff3 -E --merge $file_path/tmp/data_dev.sql $file_path/tmp/data_lastmerge.sql $file_path/tmp/data_prod.sql > $file_path/tmp/data_merged.sql");
+
+  // Check to see if the data merge had conflicts.  Otherwise, continue.
+  $conflicts = exec("grep '^<<<<<<<' $file_path/tmp/data_merged.sql");
+  if($conflicts){
+
+    $message = "\n\nWARNING: The database has conflicts!\n\n";
+
+    $message .= "Please check $file_path/tmp/data_merged.sql for what conflicted\n";
+    $message .= "(hint: search for <<<<<<<), then:\n";
+    $message .= "  * Resolve the conflicts manually\n";
+    $message .= "  * Save $file_path/tmp/data_merged.sql\n\n";
+
+    $message .= "NOTE: If you want to default all conflicts to production values,\n
+                  run this command instead of resolving manually:\n\n";
+
+    $message .= "diff3 -e --merge $file_path/tmp/data_dev.sql $file_path/tmp/data_lastmerge.sql $file_path/tmp/data_prod.sql > $file_path/tmp/data_merged.sql\n\n";
+
+    $message .= "After resolving conflicts, run the following commands\n
+                  (just copy and paste):\n\n"; 
+
+    $message .= "cat $file_path/tmp/data_merged.sql >> $file_path/tmp/merged_database.sql\n";
+    $message .= "cp $file_path/tmp/merged_database.sql $file_path/$prod_db.sql\n";
+    $message .= "$script_path/restore.php production min sequences\n";
+    $message .= "$script_path/dump.php production min\n";
+    $message .= "cp $file_path/tmp/merged_database.sql $file_path/$dev_db.sql\n";
+    $message .= "$script_path/restore.php $dev_db\n";
+    $message .= "$script_path/dump.php $dev_db\n";
+    $message .= "cp $file_path/$dev_db.sql $file_path/$lastmerge_db.sql\n";
+    $message .= "$script_path/restore.php production min\n";
+
+  } else {
+
+    print " Successful! \n\nPreparing final files...";
+
+    // Append the merged data to the merged version we're building
+    exec("cat $file_path/tmp/data_merged.sql >> $file_path/tmp/merged_database.sql");
+    print ".";
+
+    // Apply the merged data to the databases
+    exec("cp $file_path/tmp/merged_database.sql $file_path/$dev_db.sql");
+    print ".";
+    exec("cp $file_path/tmp/merged_database.sql $file_path/$prod_db.sql");
+    print ".";
+
+
+    // Restore and dump databases so they are formated correctly with correct  
+    // sequences for their version and prepared to be committed into svn.
+    //
+    // Production is restored first to align the database with the sequences currently 
+    // in MySQL (which is the production version), then restored again after 
+    // development to leave the MySQL status ready to be testing for the live version
+    dbscripts_restore($prod_db, 'min', 'sequences');
+    print ".";
+    dbscripts_dump($prod_db, 'min');
+    print ".";
+    dbscripts_restore($dev_db);
+    print ".";
+    dbscripts_dump($dev_db);
+    print ".";
+    exec("cp $file_path/$dev_db.sql $file_path/$lastmerge_db.sql"); // Merged database is a copy of development
+    print ".";
+    dbscripts_restore($prod_db, 'min');
+    print ".";
+
+    //Delete temp files
+    exec("rm $file_path/tmp/*");
+    print " Done.";
+
+    $message = "Merge completed successfully.  Congrats! Pat yourself on the back.\n";
+  }
+
+  return "\n\n$message\n";
 }
+
+
+
+

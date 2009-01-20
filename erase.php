@@ -5,6 +5,6 @@
     print dbscripts_help('erase');
   } else {
     $options = dbscripts_get_options($_SERVER['argv']);
-    print dbscripts_erase($options['filter']);
+    print dbscripts_erase($options['filter'], $options['sequences']);
   }
 ?>
