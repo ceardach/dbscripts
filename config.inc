@@ -99,6 +99,7 @@ $tables_merge = array(
   'image_attach',
   'img_assist_map',
   'menu_links',
+  'menu_router',
   'node',
   'node_access',
   'node_revisions',

@@ -3,8 +3,8 @@
 /**
  * Path Settings
  *   - Relative path from where you would be running the scripts
-       (assumed to be your version control root, which may or may not differ from
-       your web root)
+ *     (assumed to be your version control root, which may or may not differ from
+ *     your web root)
  *   - Do not use trailing slashes
  */
 
@@ -15,7 +15,7 @@ $script_path = './dbscripts';
 $settings_path = './sites/default';
 
 // Location where database dump files will be stored
-$file_path = './databases';
+$dump_path = './databases';
 
 // Location of mysql binaries (needs to be set if not in your path)
 $mysql = 'mysql';
@@ -28,110 +28,165 @@ $charsets = '/usr/local/share/mysql/charsets';
 /**
  * Database type (mysql, mysqli)
  */
-$dbtype = 'mysql';
+$dbtype = 'mysqli';
 
 
 
 /**
- * Arrays of tables to dictate how each of their data should be manipulated
+ * Filtered tables
+ * Some data is not nessisary in some cases and shouldn't be stored
  */
 
-// Tables to be filtered and not stored
-// These tables are always used except when 'none' filtering option is used
+// These tables are always filtered except when 'none' filtering option is used
+// always deleted when performing a restore
 $tables_filtered =  array(
   'cache',
   'cache_.*',
+  'views_object_cache',
+  'votingapi_cache',
 );
 
+// Tables for 'min' filtering option
+// preserved in working space
+$tables_filtered_l1 = array(
+  'sessions',
+  'openid_association',
+);
 
-// Tables to be filtered and not stored, but preserved in the working space
-// Tables for 'full' filtering option
-$tables_preserved_full =  array(
+// Tables for 'full' filtering option, in addition to 'min'
+// preserved in working space
+$tables_filtered_l2 =  array(
   'accesslog',
+  'aggregator_item',
+  'aggregator_category_item',
   'comments',
-  'forward_log',
-  'forward_statistics',
+  'node_comment_statistics',
+  'fivestar_comment',
   'flood',
   'history',
   'mollom',
   'node_comment_statistics',
   'node_counter',
+  'poll_votes',
   'search_dataset',
   'search_index',
+  'search_node_links',
   'search_total',
-  'send',
-  'send_recipient',
-  'sessions',
-  'views_audit',
+  'votingapi_vote',
   'watchdog',
 );
 
-// Tables for 'min' filtering option
-$tables_preserved_min = array(
-  'sessions',
-);
+
+/**
+ * Classifying Tables
+ * Should the data be taken from development, production, or be merged from the two
+ */
 
 
-// Tables that contain content to be merged
-$tables_content = array(
+// Tables that contain content to be merged from both development and production
+$tables_merge = array(
+  'aggregator_category',
+  'aggregator_category_feed',
+  'aggregator_feed',
   'authmap',
-  'content_field_.*', 
-  'content_type_.*', 
+  'blogapi_files',
+  'book',
+  'content_field_.*',
+  'content_type_.*',
   'files',
-  'file_revisions',
+  'forum',
   'image',
+  'image_attach',
   'img_assist_map',
-  'menu',
+  'menu_links',
+  'menu_router',
   'node',
   'node_access',
   'node_revisions',
-  'nodewords',
-  'path_redirect',
-  'search_block',
-  'send_setting',
-  'slideshow',
+  'profile_values',
+  'poll',
+  'poll_choices',
   'term_data',
   'term_hierarchy',
   'term_node',
   'term_relation',
   'term_synonym',
+  'upload',
   'url_alias',
-  'webfm_attach',
-  'webfm_file',
-  'workflow_node',
-  'workflow_node_history',
-  'workflow_scheduled_transition',
-  'xmlsitemap_node',
-  'xmlsitemap_term',
+  'vocabulary',
+  'vocabulary_node_types',
+  'webform_submissions',
+  'webform_submitted_data',
 );
 
 
-// Tables that contain user data and user tracking
-$tables_users = array(
+// Tables that contain content to be taken from production
+// Will override any data made during development
+$tables_override = array(
   'accesslog',
+  'aggregator_item',
+  'aggregator_category_item',
   'comments',
-  'forward_log',
-  'forward_statistics',
+  'comment_notify',
+  'fivestar_comment',
   'flood',
   'history',
   'mollom',
-  'node_comment_statistics',
   'node_counter',
+  'node_comment_statistics',
+  'poll_votes',
   'profile_values',
   'search_dataset',
   'search_index',
+  'search_node_links',
   'search_total',
-  'send',
-  'send_recipient',
+  'sessions',
   'users',
   'users_roles',
+  'votingapi_vote',
   'watchdog',
 );
 
-
-// Tables with autoincrement that will have their sequences stripped
-$tables_increment = array(
-  'url_alias',
+// Tables that contain content to be taken from development
+// Will override any data made during production (so don't change this data in
+//   production!)
+// This array actually doesn't do anything in the script, it's just here for the
+//   sake of development information
+$tables_structure = array(
+  'access',
+  'actions',
+  'actions_aid',
+  'advanced_help_index',
+  'batch',
+  'blocks',
+  'blocks_roles',
+  'boxes',
+  'contact',
+  'content_group',
+  'content_group_fields',
+  'content_node_field',
+  'content_node_field_instance',
+  'filters',
+  'filter_formats',
+  'imagecache_action',
+  'imagecache_preset',
+  'languages',
+  'locales_source',
+  'locales_target',
+  'menu_custom',
+  'menu_router',
+  'node_type',
+  'permission',
+  'profile_fields',
+  'role',
+  'system',
+  'trigger_assignments',
+  'variable',
+  'views_display',
+  'views_view',
+  'webform',
+  'webform_component',
+  'webform_roles',
 );
 
 
