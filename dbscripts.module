@@ -349,17 +349,19 @@ EOF;
 
 
 /**
- * Remove Tables from a given array
+ * Process an array of tables
  *
- * When given an array of all tables, and remove all tables given in the tables
- * to extract array.
+ * When given an array of all tables, you can either remove matches
+ * from the table list, or pick only positive matches
  *
  * @param $branch
  *    Which branch should be use for its list of tables
- * @param $tables_extract
- *    An array of table names that should be removed
+ * @param $tables_compare
+ *    An array of table names that should be compared
+ * @param $remove_match
+ *    Should matches in $tables_compare be removed from the list, or kept
  */
-function dbscripts_remove_tables($branch, $tables_extract) {
+function dbscripts_process_tables($branch, $tables_compare, $remove_match = TRUE) {
   require('config.inc');
 
   $tables = file("$dump_path/$branch/table_list.txt", FILE_IGNORE_NEW_LINES);
@@ -368,17 +370,25 @@ function dbscripts_remove_tables($branch, $tables_extract) {
     // Since some tables are specified with a .*, generating other possible values
     $truncated = explode('_', $table);
     $truncated1 = isset($truncated[0]) ? $truncated[0].'_.*' : '';
-    $truncated2 = isset($truncated[1]) ? $truncated[1].'_.*' : '';
+    $truncated2 = isset($truncated[1]) ? $truncated[0].'_'.$truncated[1].'_.*' : '';
 
     $check_tables = array($table, $truncated1, $truncated2);
     foreach ($check_tables as $check) {
-      if (in_array($check, $tables_extract)) {
-        unset($tables[$key]); // remove the table if it exists in $tables_extract
+      if (in_array($check, $tables_compare)) {
+        $tables_match[$key] = $table;
       }
     }
   }
 
-  return $tables;
+  foreach ($tables_match as $key => $table) {
+    unset($tables[$key]);
+  }
+
+  if ($remove_match) {
+    return $tables;
+  } else {
+  	return $tables_match;
+  }
 }
 
 
@@ -463,7 +473,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   exec("mv $temp_location/* $dump_location/tables");
 
   // Dump the data of all tables we're tracking
-  $tables_dumped = dbscripts_remove_tables($branch, $tables_cleared);
+  $tables_dumped = dbscripts_process_tables($branch, $tables_cleared);
   foreach ($tables_dumped as $table) {
     exec("$mysqldump $dump_options --no-create-info $db_connection_settings --tables $table > $temp_location/$table.sql");
 
@@ -597,7 +607,7 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
   dbscripts_erase($filter_option);
 
   // Restore each database file
-  $tables_restored = dbscripts_remove_tables($branch, $tables_preserved);
+  $tables_restored = dbscripts_process_tables($branch, $tables_preserved);
   foreach ($tables_restored as $table) {
     if (file_exists("$dump_location/tables/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/tables/$table.sql");
     if (file_exists("$dump_location/data/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/data/$table.sql");
@@ -626,197 +636,83 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
  *   and user data will be perserved.  All other data will be lost.
  */
 function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-merge', $prod_branch = 'production') {
-
-  print "Not currently supported.";
-  exit;
-
   require('config.inc');
 
-  // If empty data gets sent through, reset it
-  if (!$dev_branch) {
-    $dev_branch = 'development';
-  }
-  if (!$lastmerge_branch) {
-    $lastmerge_branch = 'last-merge';
-  }
-  if (!$prod_branch) {
-    $prod_branch = 'production';
-  }
+  $message = "WARNING: This merge only merges tables, not data\n\n";
 
-  // Ensure all the files exist
-  $missing_db = '';
-  if (!file_exists("$dump_path/$dev_db.sql")) {
-    $missing_db .= $dev_db.'.sql ';
-  }
-  if (!file_exists("$dump_path/$lastmerge_db.sql")) {
-    $missing_db .= $lastmerge_db.'.sql ';
-  }
-  if (!file_exists("$dump_path/$prod_db.sql")) {
-    $missing_db .= $prod_db.'.sql ';
-  }
+  // If empty data gets sent through, reset it to defaults
+  if (!$dev_branch) $dev_branch = 'development';
+  if (!$lastmerge_branch) $lastmerge_branch = 'last-merge';
+  if (!$prod_branch) $prod_branch = 'production';
 
-  // Cancel merge if all files do not exist
-  if ($missing_db) {
-    return "\nMissing database files for merge: $missing_db\n\n";
+  // Set all locations
+  $temp_location = "$dump_path/tmp";
+  $dev_location = "$dump_path/$dev_branch";
+  $lastmerge_location = "$dump_path/$lastmerge_branch";
+  $prod_location = "$dump_path/$prod_branch";
+  $merge_location = "$temp_location/merge";
+
+  // Ensure all the branches exist
+  $missing_branch = '';
+  if (!file_exists($dev_location)) $missing_branch .= $dev_branch.' ';
+  if (!file_exists($lastmerge_location)) $missing_branch .= $lastmerge_branch.' ';
+  if (!file_exists($prod_location)) $missing_branch .= $prod_branch.' ';
+
+  // Cancel merge if all branches do not exist
+  if ($missing_branch) {
+    return "\nMissing database files for merge: $missing_branch\n\n";
   }
 
   // Ensure tmp folder exists
-  if (!file_exists($dump_path.'/tmp')) {
-    exec("mkdir -p $dump_path/tmp");
+  if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
+
+  // After a conflict, the temp files would still exist, so delete them
+  if (exec("ls $temp_location")) exec("rm -r $temp_location/*");
+
+  // Creating merge folders
+  if (!file_exists($merge_location)) exec("mkdir -p $merge_location/tables $merge_location/data");
+
+  // Define the tables
+  $tables_content = dbscripts_process_tables($dev_branch, $tables_merge, FALSE);
+  $tables_prod = dbscripts_process_tables($prod_branch, $tables_override, FALSE);
+  $tables_dev = dbscripts_process_tables($dev_branch, array_merge($tables_merge, $tables_override));
+
+  // Move all development tables and data to the temp merge location
+  foreach ($tables_dev as $table) {
+  	if (file_exists("$dev_location/tables/$table.sql")) exec("cp $dev_location/tables/$table.sql $merge_location/tables");
+    if (file_exists("$dev_location/data/$table.sql")) exec("cp $dev_location/data/$table.sql $merge_location/data");
   }
 
-  // After a conflict, the temp files would still exist
-  if(file_exists("$dump_path/tmp/data_merged.sql")){
-    exec("rm $dump_path/tmp/*");
+  // Move all the production tables and data to the temp merge location
+  foreach ($tables_prod as $table) {
+    if (file_exists("$prod_location/tables/$table.sql")) exec("cp $prod_location/tables/$table.sql $merge_location/tables");
+    if (file_exists("$prod_location/data/$table.sql")) exec("cp $prod_location/data/$table.sql $merge_location/data");
   }
 
-  // Adding status indicators, because when it takes 15 minutes, it's nice to
-  // know where you're at in the process.
-  print "\nRestoring production database...";
-
-  // To store production sequences, the full original production version of the
-  // database will be loaded into MySQL.
-  dbscripts_restore($prod_branch,'min');
-
-  print " Done.";
-
-  //Set up ability to strip data from tables
-  $strip_merge = '';
-  foreach($tables_merge as $table){
-    $strip_content .= "|grep -v 'INSERT INTO .".$table.". VALUES' ";
-  }
-  $strip_override = '';
-  foreach($tables_override as $table){
-    $strip_users .= "|grep -v 'INSERT INTO .".$table.". VALUES' ";
+  // Since we do not have real merging, also move all production content data to temp merge location
+  foreach ($tables_content as $table) {
+    if (file_exists("$prod_location/tables/$table.sql")) exec("cp $prod_location/tables/$table.sql $merge_location/tables");
+    if (file_exists("$prod_location/data/$table.sql")) exec("cp $prod_location/data/$table.sql $merge_location/data");
   }
 
-  // Set up ability to strip SQL comments
-  $strip_comment = '';
-  foreach($sql_comment_unset as $comment){
-    $strip_comment .= "|grep -v '".$comment."' ";
+  // Copy this new merged version to all three branches
+  exec("rm $dev_location/tables/* $dev_location/data/* $lastmerge_location/tables/* $lastmerge_location/data/* $prod_location/tables/* $prod_location/data/*");
+  exec("cp $merge_location/tables/* $dev_location/tables");
+  exec("cp $merge_location/tables/* $lastmerge_location/tables");
+  exec("cp $merge_location/tables/* $prod_location/tables");
+  exec("cp $merge_location/data/* $prod_location/data");
+
+  // Dev and last-merge do not need to be bothered with all the data
+  $tables_dev_data = dbscripts_process_tables($dev_branch, array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2));
+  foreach ($tables_dev_data as $table) {
+  	if (file_exists("$merge_location/data/$table.sql")) exec("cp $merge_location/data/$table.sql $dev_location/data");
   }
+  exec("cp $dev_location/data/* $lastmerge_location/data");
 
-  // To ensure that the newly merged databases get imported into the database
-  // correctly, tables that were modified to not be dropped in development,
-  // need to be reversed
-  $reverse_filter = '';
-  $tables_preserved = array_merge($tables_filtered_l1,$tables_filtered_l2);
-  foreach($tables_preserved as $table) {
-    $reverse_filter .= "|sed 's/CREATE TABLE IF NOT EXISTS .".$table.". (/DROP TABLE IF EXISTS `".$table."`; CREATE TABLE `".$table."` (/g' ";
-  }
+  $message .= "Merge was successfull.";
 
-  print "\n\nPreparing temporary files...";
+  // Clear temp
+  //exec("rm -r $temp_location/*");
 
-  // Take development database and strip it of content and user data to
-  // create a skeleton to work from (skeleton.sql)
-  exec("cat $dump_path/$dev_db.sql $strip_merge $strip_override $strip_comment $reverse_filter > $dump_path/tmp/skeleton.sql");
-  print "."; // ghetto status indicators
-
-  // copy skeleton to where we'll be building the newly merged database
-  exec("cp $dump_path/tmp/skeleton.sql $dump_path/tmp/merged_database.sql");
-  print ".";
-
-  //Add production user data to start building the newly merged database
-  foreach($tables_override as $table){
-    exec("grep 'INSERT INTO .".$table.". VALUES' $dump_path/$prod_db.sql >> $dump_path/tmp/data_user.sql");
-    print ".";
-  }
-  exec("cat $dump_path/tmp/data_user.sql >> $dump_path/tmp/merged_database.sql");
-  print ".";
-
-  // Grab data from production, development and merged databases
-  // Strip auto increment table sequences to avoid conflicts
-  if(file_exists("$dump_path/tmp/data_dev.sql")){ exec("rm $dump_path/tmp/data_dev.sql"); }
-  if(file_exists("$dump_path/tmp/data_prod.sql")){ exec("rm $dump_path/tmp/data_prod.sql"); }
-  if(file_exists("$dump_path/tmp/data_lastmerge.sql")){ exec("rm $dump_path/tmp/data_lastmerge.sql"); }
-
-  foreach($tables_merge as $table){
-    exec("grep 'INSERT INTO .".$table.". VALUES' $dump_path/$dev_db.sql $strip_increment >> $dump_path/tmp/data_dev.sql");
-    print ".";
-    exec("grep 'INSERT INTO .".$table.". VALUES' $dump_path/$prod_db.sql $strip_increment >> $dump_path/tmp/data_prod.sql");
-    print ".";
-    exec("grep 'INSERT INTO .".$table.". VALUES' $dump_path/$lastmerge_db.sql $strip_increment >> $dump_path/tmp/data_lastmerge.sql");
-    print ".";
-  }
-
-  // Create a new merged version of data (this step takes awhile)
-  // NOTE: requires GNU diff3
-  print " Done.  \n\nPerforming merge of data...";
-  exec("diff3 -E --merge $dump_path/tmp/data_dev.sql $dump_path/tmp/data_lastmerge.sql $dump_path/tmp/data_prod.sql > $dump_path/tmp/data_merged.sql");
-
-  // Check to see if the data merge had conflicts.  Otherwise, continue.
-  $conflicts = exec("grep '^<<<<<<<' $dump_path/tmp/data_merged.sql");
-  if($conflicts){
-
-    $message = "\n\nWARNING: The database has conflicts!\n\n";
-
-    $message .= "Please check $dump_path/tmp/data_merged.sql for what conflicted\n";
-    $message .= "(hint: search for <<<<<<<), then:\n";
-    $message .= "  * Resolve the conflicts manually\n";
-    $message .= "  * Save $dump_path/tmp/data_merged.sql\n\n";
-
-    $message .= "NOTE: If you want to default all conflicts to production values,\n
-                  run this command instead of resolving manually:\n\n";
-
-    $message .= "diff3 -e --merge $dump_path/tmp/data_dev.sql $dump_path/tmp/data_lastmerge.sql $dump_path/tmp/data_prod.sql > $dump_path/tmp/data_merged.sql\n\n";
-
-    $message .= "After resolving conflicts, run the following commands\n
-                  (just copy and paste):\n\n";
-
-    $message .= "cat $dump_path/tmp/data_merged.sql >> $dump_path/tmp/merged_database.sql\n";
-    $message .= "cp $dump_path/tmp/merged_database.sql $dump_path/$prod_db.sql\n";
-    $message .= "$script_path/restore.php production min\n";
-    $message .= "$script_path/dump.php production min\n";
-    $message .= "cp $dump_path/tmp/merged_database.sql $dump_path/$dev_db.sql\n";
-    $message .= "$script_path/restore.php $dev_branch\n";
-    $message .= "$script_path/dump.php $dev_branch\n";
-    $message .= "cp $dump_path/$dev_db.sql $dump_path/$lastmerge_db.sql\n";
-    $message .= "$script_path/restore.php production min\n";
-
-  } else {
-
-    print " Successful! \n\nPreparing final files...";
-
-    // Append the merged data to the merged version we're building
-    exec("cat $dump_path/tmp/data_merged.sql >> $dump_path/tmp/merged_database.sql");
-    print ".";
-
-    // Apply the merged data to the databases
-    exec("cp $dump_path/tmp/merged_database.sql $dump_path/$dev_db.sql");
-    print ".";
-    exec("cp $dump_path/tmp/merged_database.sql $dump_path/$prod_db.sql");
-    print ".";
-
-
-    // Restore and dump databases so they are formated correctly with correct
-    // sequences for their version and prepared to be committed into svn.
-    //
-    // Production is restored first to align the database with the sequences currently
-    // in MySQL (which is the production version), then restored again after
-    // development to leave the MySQL status ready to be testing for the live version
-    dbscripts_restore($prod_branch, 'min');
-    print ".";
-    dbscripts_dump($prod_branch, 'min');
-    print ".";
-    dbscripts_restore($dev_branch);
-    print ".";
-    dbscripts_dump($dev_branch);
-    print ".";
-    exec("cp $dump_path/$dev_db.sql $dump_path/$lastmerge_db.sql"); // Merged database is a copy of development
-    print ".";
-    dbscripts_restore($prod_branch, 'min');
-    print ".";
-
-    //Delete temp files
-    exec("rm $dump_path/tmp/*");
-    print " Done.";
-
-    $message = "Merge completed successfully.  Congrats! Pat yourself on the back.\n";
-  }
-
-  return "\n\n$message\n";
+  return "\n$message\n\n";
 }
-
-
-
-
