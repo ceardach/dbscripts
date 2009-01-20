@@ -105,7 +105,7 @@ NAME
     Dump - database dump script
 
 SYNOPSIS
-    dump.php [dump-file] [filter-option]
+    dump.php [branch] [filter-option]
 
 EXAMPLE USAGE
     development: dump.php
@@ -113,18 +113,18 @@ EXAMPLE USAGE
     last merge:  dump.php last-merge
 
 DESCRIPTION
-    Dump the database from MySQL to a given file.  The dump is 'diffable'
-    allowing it to be under version control.  Filtering options are performed
-    to avoid dumping data that is not nessisary to be stored from development
-    and production environments.
+    Dump the database from MySQL to a given branch of dump files.  The dump is
+    'diffable' allowing it to be under version control.  Filtering options are
+    performed to avoid dumping data that is not nessisary to be stored from
+    development and production environments.
 
 OPTIONS
-    dump-file
-        File the database should be dumped to.  Default options are
-        'development', 'production' and 'last-merge'.  Other filename patterns
-        may be used if you wish to dump the database to an alternat location.
+    branch
+        Branch the database should be dumped to.  Default options are
+        'development', 'production' and 'last-merge'.  Other naming patterns
+        may be used if you wish to dump the database to an alternate location.
         Relative to: {$file_path}
-        Defaults to: {$file_path}/development.sql
+        Defaults to: {$file_path}/development
 
     filter-option
         The level of filtering that should be performed during the dump.
@@ -155,6 +155,8 @@ SEE ALSO
         http://drupal.org/node/232151
     dump documentation
         http://drupal.org/node/232153
+
+    Online ocumentation is not up-to-date for the 2.x version
 \n
 EOF;
       break;
@@ -175,19 +177,19 @@ EXAMPLE USAGE
     last merge:  restore.php last-merge
 
 DESCRIPTION
-    Restores the database from a given file.  Filtering options are performed
+    Restores the database from a given branch.  Filtering options are performed
     to prevent certain data from being lost in the MySQL database in
     development and production environments.  Also performs the 'erase' script
     to ensure that any tables removed in development are removed when performing
     a restore.
 
 OPTIONS
-    file
-        The file the database should be restored from.  Default options are
-        'development', 'production' and 'last-merge'.  Other filename patterns
-        may be used if you wish to restore the database from an alternate file.
+    branch
+        The branch the database should be restored from.  Default options are
+        'development', 'production' and 'last-merge'.  Other naming patterns
+        may be used if you wish to restore the database from an alternate branch.
         Relative to: {$file_path}
-        Defaults to: {$file_path}/development.sql
+        Defaults to: {$file_path}/development
 
     filter-option
         The level of filtering that should be performed during the restore to
@@ -222,6 +224,8 @@ SEE ALSO
         http://drupal.org/node/232151
     restore and erase documentation
         http://drupal.org/node/232154
+
+    Online ocumentation is not up-to-date for the 2.x version
 \n
 EOF;
       break;
@@ -274,8 +278,10 @@ AUTHOR
 SEE ALSO
     dbscripts documentation
         http://drupal.org/node/232151
-    merge documentation
+    restore and erase documentation
         http://drupal.org/node/232154
+
+    Online ocumentation is not up-to-date for the 2.x version
 \n
 EOF;
       break;
@@ -287,7 +293,7 @@ NAME
     Merge - database merge script
 
 SYNOPSIS
-    merge.php [dev-db] [last-merge-db] [prod-db]
+    merge.php [dev-branch] [last-merge-branch] [prod-branch]
 
 EXAMPLE USAGE
     default: merge.php
@@ -296,27 +302,27 @@ DESCRIPTION
     Merge a development and production database together.
 
 OPTIONS
-    dev-db
-        The location of the database file used for development.  Only configuration
+    dev-branch
+        The location of the database branch used for development.  Only configuration
         and content changes will be preserved from this file.  All user data
         will be lost.
         Relative to: {$file_path}
-        Defaults to: {$file_path}/development.sql
+        Defaults to: {$file_path}/development
 
-    last-merge-db
-        The location of the database file that was used to represent the state
+    last-merge-branch
+        The location of the database branch that was used to represent the state
         the last time both production development were merged.  This is
         important to be able to track the difference between an addition and a
         subtraction.
         Relative to: {$file_path}
-        Defaults to: {$file_path}/last-merge.sql
+        Defaults to: {$file_path}/last-merge
 
-    prod-db
-        The location of the database file used for production.  Only content and
-        user data will be preserved from this file.  All other data will be
+    prod-branch
+        The location of the database branch used for production.  Only content and
+        user data will be preserved from this branch.  All other data will be
         lost.
         Relative to: {$file_path}
-        defaults to: {$file_path}/production.sql
+        defaults to: {$file_path}/production
 
 FILES
     {$script_path}/config.inc
@@ -332,6 +338,8 @@ SEE ALSO
         http://drupal.org/node/232151
     merge documentation
         http://drupal.org/node/232155
+
+    Online ocumentation is not up-to-date for the 2.x version
 \n
 EOF;
       break;
@@ -349,9 +357,9 @@ EOF;
  * Dump the database
  *
  * @param $branch
- *   File the database should be dumped to.  Defaults to 'development'.
+ *   Branch that the database should be dumped to.  Defaults to 'development'.
  *   Alternative options that are supported by default are 'production' and
- *   'last-merge'.  Other filename patterns may be used if you wish to dump the
+ *   'last-merge'.  Other string patterns may be used if you wish to dump the
  *   the database to an alternate location.
  * @param $filter_option
  *   Choose what level of filtering should be performed during the dump.  Filter
@@ -363,7 +371,7 @@ EOF;
  *       for removing sessions and cache data.  Use this when dumping a
  *       production database.
  *   'none' - NO filtering is performed whatsoever.  The entire database is
- *       dumped to the given file.
+ *       dumped.
  */
 function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   require('config.inc');
@@ -474,7 +482,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
 }
 
 
-/*
+/**
  * Erase the database
  *
  * @param $filter_option
@@ -601,30 +609,34 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
  * You really only need to set the following parameters for expert use.
  * Otherwise this function can be run with no options.
  *
- * @param $dev_db
+ * @param $dev_branch
  *   Location of the database file that was used for 'development'.  Only
  *   configuration and content changes will be preserved.  All user data will
  *   be lost.
- * @param $lastmerge_db
+ * @param $lastmerge_branch
  *   Location of the database file that was used to represent the state the
  *   last time both production and development were merged.  This is important
  *   to be able to track the difference between an addition and a subtraction.
- * @param $prod_db
+ * @param $prod_branch
  *   Location of the database file that is used as 'production'.  Only content
  *   and user data will be perserved.  All other data will be lost.
  */
-function dbscripts_merge($dev_db = 'development', $lastmerge_db = 'last-merge', $prod_db = 'production') {
+function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-merge', $prod_branch = 'production') {
+
+  print "Not currently supported.";
+  exit;
+
   require('config.inc');
 
   // If empty data gets sent through, reset it
-  if (!$dev_db) {
-    $dev_db = 'development';
+  if (!$dev_branch) {
+    $dev_branch = 'development';
   }
-  if (!$lastmerge_db) {
-    $lastmerge_db = 'last-merge';
+  if (!$lastmerge_branch) {
+    $lastmerge_branch = 'last-merge';
   }
-  if (!$prod_db) {
-    $prod_db = 'production';
+  if (!$prod_branch) {
+    $prod_branch = 'production';
   }
 
   // Ensure all the files exist
@@ -660,7 +672,7 @@ function dbscripts_merge($dev_db = 'development', $lastmerge_db = 'last-merge', 
 
   // To store production sequences, the full original production version of the
   // database will be loaded into MySQL.
-  dbscripts_restore($prod_db,'min');
+  dbscripts_restore($prod_branch,'min');
 
   print " Done.";
 
@@ -749,11 +761,11 @@ function dbscripts_merge($dev_db = 'development', $lastmerge_db = 'last-merge', 
 
     $message .= "cat $dump_path/tmp/data_merged.sql >> $dump_path/tmp/merged_database.sql\n";
     $message .= "cp $dump_path/tmp/merged_database.sql $dump_path/$prod_db.sql\n";
-    $message .= "$script_path/restore.php production min sequences\n";
+    $message .= "$script_path/restore.php production min\n";
     $message .= "$script_path/dump.php production min\n";
     $message .= "cp $dump_path/tmp/merged_database.sql $dump_path/$dev_db.sql\n";
-    $message .= "$script_path/restore.php $dev_db\n";
-    $message .= "$script_path/dump.php $dev_db\n";
+    $message .= "$script_path/restore.php $dev_branch\n";
+    $message .= "$script_path/dump.php $dev_branch\n";
     $message .= "cp $dump_path/$dev_db.sql $dump_path/$lastmerge_db.sql\n";
     $message .= "$script_path/restore.php production min\n";
 
@@ -778,17 +790,17 @@ function dbscripts_merge($dev_db = 'development', $lastmerge_db = 'last-merge', 
     // Production is restored first to align the database with the sequences currently
     // in MySQL (which is the production version), then restored again after
     // development to leave the MySQL status ready to be testing for the live version
-    dbscripts_restore($prod_db, 'min', 'sequences');
+    dbscripts_restore($prod_branch, 'min');
     print ".";
-    dbscripts_dump($prod_db, 'min');
+    dbscripts_dump($prod_branch, 'min');
     print ".";
-    dbscripts_restore($dev_db);
+    dbscripts_restore($dev_branch);
     print ".";
-    dbscripts_dump($dev_db);
+    dbscripts_dump($dev_branch);
     print ".";
     exec("cp $dump_path/$dev_db.sql $dump_path/$lastmerge_db.sql"); // Merged database is a copy of development
     print ".";
-    dbscripts_restore($prod_db, 'min');
+    dbscripts_restore($prod_branch, 'min');
     print ".";
 
     //Delete temp files

@@ -147,8 +147,10 @@ $tables_override = array(
 );
 
 // Tables that contain content to be taken from development
-// Will override any data made during production (so don't change this data in production!)
-// This table actually doesn't do anything in the script, it's just here for the sake of information
+// Will override any data made during production (so don't change this data in
+//   production!)
+// This array actually doesn't do anything in the script, it's just here for the
+//   sake of development information
 $tables_structure = array(
   'access',
   'actions',
