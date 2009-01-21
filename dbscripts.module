@@ -551,15 +551,15 @@ function dbscripts_tables_with_increment($branch, $filter_option = "full") {
 
   $table_list = dbscripts_process_tables($branch, $tables_ignored);
 
-  $list = '';
+  $list = array();
   foreach ($table_list as $table) {
     $increment = dbscripts_table_increment($table, $branch);
     if ($increment) {
-      $list .= "$table\n";
+      $list[] = $table;
     }
   }
 
-  return "\n$list\n";
+  return $list;
 }
 
 
