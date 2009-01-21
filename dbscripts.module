@@ -349,77 +349,6 @@ EOF;
 
 
 /**
- * Process an array of tables
- *
- * When given an array of all tables, you can either remove matches
- * from the table list, or pick only positive matches
- *
- * @param $branch
- *    Which branch should be use for its list of tables
- * @param $tables_compare
- *    An array of table names that should be compared
- * @param $remove_match
- *    Should matches in $tables_compare be removed from the list, or kept
- */
-function dbscripts_process_tables($branch, $tables_compare, $remove_match = TRUE) {
-  require('config.inc');
-
-  $tables = file("$dump_path/$branch/table_list.txt", FILE_IGNORE_NEW_LINES);
-
-  foreach ($tables as $key => $table) {
-    // Since some tables are specified with a .*, generating other possible values
-    $truncated = explode('_', $table);
-    $truncated1 = isset($truncated[0]) ? $truncated[0].'_.*' : '';
-    $truncated2 = isset($truncated[1]) ? $truncated[0].'_'.$truncated[1].'_.*' : '';
-
-    $check_tables = array($table, $truncated1, $truncated2);
-    foreach ($check_tables as $check) {
-      if (in_array($check, $tables_compare)) {
-        $tables_match[$key] = $table;
-      }
-    }
-  }
-
-  foreach ($tables_match as $key => $table) {
-    unset($tables[$key]);
-  }
-
-  if ($remove_match) {
-    return $tables;
-  } else {
-  	return $tables_match;
-  }
-}
-
-
-/**
- * Get a given table's current auto increment value
- */
-function dbscripts_table_increment($table, $branch) {
-  require('config.inc');
-
-  $branch_location = "$dump_path/$branch";
-
-  $increment = FALSE;
-  if (exec("grep 'AUTO_INCREMENT=' $branch_location/tables/$table.sql")) {
-    $inc_string = exec("grep 'AUTO_INCREMENT=' $branch_location/tables/$table.sql");
-    $inc_string_parts = explode(' ', $inc_string);
-    foreach ($inc_string_parts as $part) {
-      if (strpos($part, 'AUTO_INCREMENT=') !== FALSE) {
-        $increment['num'] = str_replace('AUTO_INCREMENT=', '', $part);
-      }
-    }
-
-    $id_string = exec("grep auto_increment $branch_location/tables/$table.sql");
-    $id_string_parts = explode('`', $id_string);
-    $increment['id'] = $id_string_parts[1];
-  }
-
-  return $increment;
-}
-
-
-/**
  * Dump the database
  *
  * @param $branch
@@ -772,4 +701,81 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
   exec("rm -r $temp_location/*");
 
   return "\n$message\n\n";
+}
+
+
+/**
+ * Process an array of tables
+ *
+ * When given an array of all tables, you can either remove matches
+ * from the table list, or pick only positive matches
+ *
+ * @param $branch
+ *    Which branch should be use for its list of tables
+ * @param $tables_compare
+ *    An array of table names that should be compared
+ * @param $remove_match
+ *    Should matches in $tables_compare be removed from the list, or kept
+ */
+function dbscripts_process_tables($branch, $tables_compare, $remove_match = TRUE) {
+  require('config.inc');
+
+  $tables = file("$dump_path/$branch/table_list.txt", FILE_IGNORE_NEW_LINES);
+
+  foreach ($tables as $key => $table) {
+    // Since some tables are specified with a .*, generating other possible values
+    $truncated = explode('_', $table);
+    $truncated1 = isset($truncated[0]) ? $truncated[0].'_.*' : '';
+    $truncated2 = isset($truncated[1]) ? $truncated[0].'_'.$truncated[1].'_.*' : '';
+
+    $check_tables = array($table, $truncated1, $truncated2);
+    foreach ($check_tables as $check) {
+      if (in_array($check, $tables_compare)) {
+        $tables_match[$key] = $table;
+      }
+    }
+  }
+
+  foreach ($tables_match as $key => $table) {
+    unset($tables[$key]);
+  }
+
+  if ($remove_match) {
+    return $tables;
+  } else {
+    return $tables_match;
+  }
+}
+
+
+/**
+ * Get a given table's current auto increment value
+ *
+ * @param $table
+ *    The table name you want to check
+ * @param $branch
+ *    The branch that will be checked, since each branch could
+ *    possibly have a different increment.
+ */
+function dbscripts_table_increment($table, $branch) {
+  require('config.inc');
+
+  $branch_location = "$dump_path/$branch";
+
+  $increment = FALSE;
+  if (exec("grep 'AUTO_INCREMENT=' $branch_location/tables/$table.sql")) {
+    $inc_string = exec("grep 'AUTO_INCREMENT=' $branch_location/tables/$table.sql");
+    $inc_string_parts = explode(' ', $inc_string);
+    foreach ($inc_string_parts as $part) {
+      if (strpos($part, 'AUTO_INCREMENT=') !== FALSE) {
+        $increment['num'] = str_replace('AUTO_INCREMENT=', '', $part);
+      }
+    }
+
+    $id_string = exec("grep auto_increment $branch_location/tables/$table.sql");
+    $id_string_parts = explode('`', $id_string);
+    $increment['id'] = $id_string_parts[1];
+  }
+
+  return $increment;
 }
