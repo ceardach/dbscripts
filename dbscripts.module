@@ -582,7 +582,7 @@ function dbscripts_table_references($table, $branch, $filter_option = "full") {
   $temp_location = "$dump_path/tmp";
 
   // Set the filtering options, ignoring tables not being tracked
-  $tables_ignored = array(array($table)); // avoid false positives
+  $tables_ignored = array();
   switch($filter_option){
     case 'none':
       break;
@@ -606,15 +606,23 @@ function dbscripts_table_references($table, $branch, $filter_option = "full") {
   $list = FALSE;
   if ($id) {
     foreach ($table_list as $check_table) {
-    	exec("grep '^  `' $branch_location/tables/$check_table.sql > $temp_location/columns.sql");
-      $columns = file("$temp_location/columns.sql", FILE_IGNORE_NEW_LINES);
-      foreach ($columns as $column) {
-      	$parts = explode('`', $column);
-        if (strpos($parts[1], $id) !== FALSE) {
-        	$list[$check_table][] = $parts[1];
+      // Ensure this table doesn't use the same ID name for auto increment as well
+      $match_increment = dbscripts_table_increment($check_table, $branch);
+      $match_id = isset($match_increment['id']) ?  $match_increment['id'] : FALSE;
+
+      if ($match_id != $id) {
+      	exec("grep '^  `' $branch_location/tables/$check_table.sql > $temp_location/columns.sql");
+        $columns = file("$temp_location/columns.sql", FILE_IGNORE_NEW_LINES);
+        foreach ($columns as $column) {
+        	$parts = explode('`', $column);
+          // Avoid returning columns that are auto_increment on that table
+          if (strpos($parts[1], $id) !== FALSE && $parts[1] != $match_id) {
+            $list[$check_table][] = $parts[1];
+          }
         }
+        exec("rm $temp_location/columns.sql");
       }
-      exec("rm $temp_location/columns.sql");
+
     }
   }
 
