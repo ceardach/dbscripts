@@ -521,6 +521,44 @@ function dbscripts_table_increment($table, $branch) {
 
 
 /**
+ * Get a list of all tables that are using auto increment
+ */
+function dbscripts_tables_with_increment($branch, $filter_option = "full") {
+  require('config.inc');
+
+  // Set location
+  $branch_location = "$dump_path/$branch";
+
+  // Set the filtering options, ignoring tables not being tracked
+  $tables_ignored = array();
+  switch($filter_option){
+    case 'none':
+      break;
+
+    case 'min':
+      $tables_ignored = array_merge($tables_filtered, $tables_filtered_l1);
+      break;
+
+    default:
+      $tables_ignored = array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2);
+      break;
+  }
+
+  $table_list = dbscripts_process_tables($branch, $tables_ignored);
+
+  $list = '';
+  foreach ($table_list as $table) {
+    $increment = dbscripts_table_increment($table, $branch);
+    if ($increment) {
+      $list .= "$table\n";
+    }
+  }
+
+  return "\n$list\n";
+}
+
+
+/**
  * Return help for each script
  *
  * @param $script
