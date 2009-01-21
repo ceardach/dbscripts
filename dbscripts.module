@@ -453,6 +453,7 @@ function dbscripts_process_tables($branch, $tables_compare, $remove_match = TRUE
   require('config.inc');
 
   $tables = file("$dump_path/$branch/table_list.txt", FILE_IGNORE_NEW_LINES);
+  $tables_match = array();
 
   foreach ($tables as $key => $table) {
     // Since some tables are specified with a .*, generating other possible values
