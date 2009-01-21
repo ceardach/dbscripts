@@ -82,273 +82,6 @@ function dbscripts_get_options($argv) {
 
 
 /**
- * Return help for each script
- *
- * @param $script
- *   Available options are 'dump', 'restore', 'erase' and 'merge'.
- */
-function dbscripts_help($script) {
-  require('config.inc');
-
-  switch ($script) {
-
-    // Dump help
-    case 'dump':
-      $help = <<<EOF
-
-NAME
-    Dump - database dump script
-
-SYNOPSIS
-    dump.php [branch] [filter-option]
-
-EXAMPLE USAGE
-    development: dump.php
-    production:  dump.php production min
-    last merge:  dump.php last-merge
-
-DESCRIPTION
-    Dump the database from MySQL to a given branch of dump files.  The dump is
-    'diffable' allowing it to be under version control.  Filtering options are
-    performed to avoid dumping data that is not nessisary to be stored from
-    development and production environments.
-
-OPTIONS
-    branch
-        Branch the database should be dumped to.  Default options are
-        'development', 'production' and 'last-merge'.  Other naming patterns
-        may be used if you wish to dump the database to an alternate location.
-        Relative to: {$file_path}
-        Defaults to: {$file_path}/development
-
-    filter-option
-        The level of filtering that should be performed during the dump.
-            full
-                Removes the full option of data from the dump.  Most useful for
-                removing user, sessions and cache data.  Recomended to be used
-                when dumping a development database
-            min
-                Removes only a select minimum of data from the dump.  Most
-                useful for removing sessions and cache data.  Recommended to be
-                used when dumping a production database.
-            none
-                NO filtering is performed whatsoever.  The entire database is
-                dumped to the given file.
-        Defaults to: full
-
-FILES
-    {$script_path}/config.inc
-        Configuration settings for customizing these scripts for your
-        environment.
-
-AUTHOR
-    Kathleen Murtagh <kathleen@ceardach.com>
-        http://drupal.org/user/79082
-
-SEE ALSO
-    dbscripts documentation
-        http://drupal.org/node/232151
-    dump documentation
-        http://drupal.org/node/232153
-
-    Online ocumentation is not up-to-date for the 2.x version
-\n
-EOF;
-      break;
-
-    // Restore help
-    case 'restore':
-      $help = <<<EOF
-
-NAME
-    Restore - database restore script
-
-SYNOPSIS
-    restore.php [branch] [filter-option]
-
-EXAMPLE USAGE
-    development: restore.php
-    production:  restore.php production min
-    last merge:  restore.php last-merge
-
-DESCRIPTION
-    Restores the database from a given branch.  Filtering options are performed
-    to prevent certain data from being lost in the MySQL database in
-    development and production environments.  Also performs the 'erase' script
-    to ensure that any tables removed in development are removed when performing
-    a restore.
-
-OPTIONS
-    branch
-        The branch the database should be restored from.  Default options are
-        'development', 'production' and 'last-merge'.  Other naming patterns
-        may be used if you wish to restore the database from an alternate branch.
-        Relative to: {$file_path}
-        Defaults to: {$file_path}/development
-
-    filter-option
-        The level of filtering that should be performed during the restore to
-        allow some data to be preserved in the MySQL database.
-            full
-                Preserves the full option of data currently residing within the
-                MySQL database.  Most useful for preserving user, sessions and
-                cache data.  Recommended to use this when restoring within a
-                development environment.
-            min
-                Preserves only a select minimum of data currently residing
-                within the MySQL database.  Most useful for preserving sessions
-                and cache data.  Recommended to use this when restoring within a
-                production environment.
-            none
-                NO filtering is performed whatsoever.  The entire database is
-                erased from MySQL and restored with only the data from the given
-                file.
-        Defaults to: full
-
-FILES
-    {$script_path}/config.inc
-        Configuration settings for customizing these scripts for your
-        environment.
-
-AUTHOR
-    Kathleen Murtagh <kathleen@ceardach.com>
-        http://drupal.org/user/79082
-
-SEE ALSO
-    dbscripts documentation
-        http://drupal.org/node/232151
-    restore and erase documentation
-        http://drupal.org/node/232154
-
-    Online ocumentation is not up-to-date for the 2.x version
-\n
-EOF;
-      break;
-
-    // Erase help
-    case 'erase':
-      $help = <<<EOF
-
-NAME
-  Erase - database erase script
-
-SYNOPSIS
-  erase.php [filter-option]
-
-EXAMPLE USAGE
-    development: erase.php
-    production:  erase.php min
-
-DESCRIPTION
-    Erases the database within the MySQL database.  Filtering options are
-    performed to prevent erasing data that should be kept.
-
-OPTIONS
-    filter-option
-        The level of filtering that shold be performed during the erasure.
-            full
-                Preserves the full option of data within the MySQL database.
-                Most useful for keeping user, sessions and cache data.
-                Recommended to be used when erasing within a development
-                environment.
-            min
-                Preserves only the select minimum of data within the MySQL
-                database.  Most useful for preserving sessions data so you do
-                not get logged out.  Recommended to be used when erasing within
-                a production environment.
-            none
-                NO filtering is performed whatsoever.  The entire database will
-                be erased.
-        Defaults to: full
-
-FILES
-    {$script_path}/config.inc
-        Configuration settings for customizing these scripts for your
-        environment.
-
-AUTHOR
-    Kathleen Murtagh <kathleen@ceardach.com>
-        http://drupal.org/user/79082
-
-SEE ALSO
-    dbscripts documentation
-        http://drupal.org/node/232151
-    restore and erase documentation
-        http://drupal.org/node/232154
-
-    Online ocumentation is not up-to-date for the 2.x version
-\n
-EOF;
-      break;
-
-    case 'merge':
-      $help = <<<EOF
-
-NAME
-    Merge - database merge script
-
-SYNOPSIS
-    merge.php [dev-branch] [last-merge-branch] [prod-branch]
-
-EXAMPLE USAGE
-    default: merge.php
-
-DESCRIPTION
-    Merge a development and production database together.
-
-OPTIONS
-    dev-branch
-        The location of the database branch used for development.  Only configuration
-        and content changes will be preserved from this file.  All user data
-        will be lost.
-        Relative to: {$file_path}
-        Defaults to: {$file_path}/development
-
-    last-merge-branch
-        The location of the database branch that was used to represent the state
-        the last time both production development were merged.  This is
-        important to be able to track the difference between an addition and a
-        subtraction.
-        Relative to: {$file_path}
-        Defaults to: {$file_path}/last-merge
-
-    prod-branch
-        The location of the database branch used for production.  Only content and
-        user data will be preserved from this branch.  All other data will be
-        lost.
-        Relative to: {$file_path}
-        defaults to: {$file_path}/production
-
-FILES
-    {$script_path}/config.inc
-        Configuration settings for customizing these scripts for your
-        environment.
-
-AUTHOR
-    Kathleen Murtagh <kathleen@ceardach.com>
-        http://drupal.org/user/79082
-
-SEE ALSO
-    dbscripts documentation
-        http://drupal.org/node/232151
-    merge documentation
-        http://drupal.org/node/232155
-
-    Online ocumentation is not up-to-date for the 2.x version
-\n
-EOF;
-      break;
-
-    default:
-      $help = 'That is not a valid script.'."\n";
-      break;
-  }
-
-  return $help;
-}
-
-
-/**
  * Dump the database
  *
  * @param $branch
@@ -778,4 +511,271 @@ function dbscripts_table_increment($table, $branch) {
   }
 
   return $increment;
+}
+
+
+/**
+ * Return help for each script
+ *
+ * @param $script
+ *   Available options are 'dump', 'restore', 'erase' and 'merge'.
+ */
+function dbscripts_help($script) {
+  require('config.inc');
+
+  switch ($script) {
+
+    // Dump help
+    case 'dump':
+      $help = <<<EOF
+
+NAME
+    Dump - database dump script
+
+SYNOPSIS
+    dump.php [branch] [filter-option]
+
+EXAMPLE USAGE
+    development: dump.php
+    production:  dump.php production min
+    last merge:  dump.php last-merge
+
+DESCRIPTION
+    Dump the database from MySQL to a given branch of dump files.  The dump is
+    'diffable' allowing it to be under version control.  Filtering options are
+    performed to avoid dumping data that is not nessisary to be stored from
+    development and production environments.
+
+OPTIONS
+    branch
+        Branch the database should be dumped to.  Default options are
+        'development', 'production' and 'last-merge'.  Other naming patterns
+        may be used if you wish to dump the database to an alternate location.
+        Relative to: {$file_path}
+        Defaults to: {$file_path}/development
+
+    filter-option
+        The level of filtering that should be performed during the dump.
+            full
+                Removes the full option of data from the dump.  Most useful for
+                removing user, sessions and cache data.  Recomended to be used
+                when dumping a development database
+            min
+                Removes only a select minimum of data from the dump.  Most
+                useful for removing sessions and cache data.  Recommended to be
+                used when dumping a production database.
+            none
+                NO filtering is performed whatsoever.  The entire database is
+                dumped to the given file.
+        Defaults to: full
+
+FILES
+    {$script_path}/config.inc
+        Configuration settings for customizing these scripts for your
+        environment.
+
+AUTHOR
+    Kathleen Murtagh <kathleen@ceardach.com>
+        http://drupal.org/user/79082
+
+SEE ALSO
+    dbscripts documentation
+        http://drupal.org/node/232151
+    dump documentation
+        http://drupal.org/node/232153
+
+    Online ocumentation is not up-to-date for the 2.x version
+\n
+EOF;
+      break;
+
+    // Restore help
+    case 'restore':
+      $help = <<<EOF
+
+NAME
+    Restore - database restore script
+
+SYNOPSIS
+    restore.php [branch] [filter-option]
+
+EXAMPLE USAGE
+    development: restore.php
+    production:  restore.php production min
+    last merge:  restore.php last-merge
+
+DESCRIPTION
+    Restores the database from a given branch.  Filtering options are performed
+    to prevent certain data from being lost in the MySQL database in
+    development and production environments.  Also performs the 'erase' script
+    to ensure that any tables removed in development are removed when performing
+    a restore.
+
+OPTIONS
+    branch
+        The branch the database should be restored from.  Default options are
+        'development', 'production' and 'last-merge'.  Other naming patterns
+        may be used if you wish to restore the database from an alternate branch.
+        Relative to: {$file_path}
+        Defaults to: {$file_path}/development
+
+    filter-option
+        The level of filtering that should be performed during the restore to
+        allow some data to be preserved in the MySQL database.
+            full
+                Preserves the full option of data currently residing within the
+                MySQL database.  Most useful for preserving user, sessions and
+                cache data.  Recommended to use this when restoring within a
+                development environment.
+            min
+                Preserves only a select minimum of data currently residing
+                within the MySQL database.  Most useful for preserving sessions
+                and cache data.  Recommended to use this when restoring within a
+                production environment.
+            none
+                NO filtering is performed whatsoever.  The entire database is
+                erased from MySQL and restored with only the data from the given
+                file.
+        Defaults to: full
+
+FILES
+    {$script_path}/config.inc
+        Configuration settings for customizing these scripts for your
+        environment.
+
+AUTHOR
+    Kathleen Murtagh <kathleen@ceardach.com>
+        http://drupal.org/user/79082
+
+SEE ALSO
+    dbscripts documentation
+        http://drupal.org/node/232151
+    restore and erase documentation
+        http://drupal.org/node/232154
+
+    Online ocumentation is not up-to-date for the 2.x version
+\n
+EOF;
+      break;
+
+    // Erase help
+    case 'erase':
+      $help = <<<EOF
+
+NAME
+  Erase - database erase script
+
+SYNOPSIS
+  erase.php [filter-option]
+
+EXAMPLE USAGE
+    development: erase.php
+    production:  erase.php min
+
+DESCRIPTION
+    Erases the database within the MySQL database.  Filtering options are
+    performed to prevent erasing data that should be kept.
+
+OPTIONS
+    filter-option
+        The level of filtering that shold be performed during the erasure.
+            full
+                Preserves the full option of data within the MySQL database.
+                Most useful for keeping user, sessions and cache data.
+                Recommended to be used when erasing within a development
+                environment.
+            min
+                Preserves only the select minimum of data within the MySQL
+                database.  Most useful for preserving sessions data so you do
+                not get logged out.  Recommended to be used when erasing within
+                a production environment.
+            none
+                NO filtering is performed whatsoever.  The entire database will
+                be erased.
+        Defaults to: full
+
+FILES
+    {$script_path}/config.inc
+        Configuration settings for customizing these scripts for your
+        environment.
+
+AUTHOR
+    Kathleen Murtagh <kathleen@ceardach.com>
+        http://drupal.org/user/79082
+
+SEE ALSO
+    dbscripts documentation
+        http://drupal.org/node/232151
+    restore and erase documentation
+        http://drupal.org/node/232154
+
+    Online ocumentation is not up-to-date for the 2.x version
+\n
+EOF;
+      break;
+
+    case 'merge':
+      $help = <<<EOF
+
+NAME
+    Merge - database merge script
+
+SYNOPSIS
+    merge.php [dev-branch] [last-merge-branch] [prod-branch]
+
+EXAMPLE USAGE
+    default: merge.php
+
+DESCRIPTION
+    Merge a development and production database together.
+
+OPTIONS
+    dev-branch
+        The location of the database branch used for development.  Only configuration
+        and content changes will be preserved from this file.  All user data
+        will be lost.
+        Relative to: {$file_path}
+        Defaults to: {$file_path}/development
+
+    last-merge-branch
+        The location of the database branch that was used to represent the state
+        the last time both production development were merged.  This is
+        important to be able to track the difference between an addition and a
+        subtraction.
+        Relative to: {$file_path}
+        Defaults to: {$file_path}/last-merge
+
+    prod-branch
+        The location of the database branch used for production.  Only content and
+        user data will be preserved from this branch.  All other data will be
+        lost.
+        Relative to: {$file_path}
+        defaults to: {$file_path}/production
+
+FILES
+    {$script_path}/config.inc
+        Configuration settings for customizing these scripts for your
+        environment.
+
+AUTHOR
+    Kathleen Murtagh <kathleen@ceardach.com>
+        http://drupal.org/user/79082
+
+SEE ALSO
+    dbscripts documentation
+        http://drupal.org/node/232151
+    merge documentation
+        http://drupal.org/node/232155
+
+    Online ocumentation is not up-to-date for the 2.x version
+\n
+EOF;
+      break;
+
+    default:
+      $help = 'That is not a valid script.'."\n";
+      break;
+  }
+
+  return $help;
 }
