@@ -120,7 +120,6 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
 
   // Set the filtering options and message to be presented to the user
   $tables_cleared = array();
-  $tables_preserved = array();
   switch($filter_option){
     case 'none':
       $message = "Performed a full database dump to $branch.";
