@@ -169,10 +169,12 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
     $increment_lastmerge = dbscripts_table_increment($table, 'last-merge');
 
     $new_data = FALSE;
-    if ($increment_current['num'] > $increment_lastmerge['num']) {
-    	$new_data = TRUE;
-    } elseif ($increment_current['num'] < $increment_lastmerge['num']) {
-    	$message .= "\n\nWARNING: Current AUTO_INCREMENT of table $table is lower than last-merge\n\n";
+    if ($increment_current && $increment_lastmerge) {
+      if ($increment_current['num'] > $increment_lastmerge['num']) {
+      	$new_data = TRUE;
+      } elseif ($increment_current['num'] < $increment_lastmerge['num']) {
+      	$message .= "\n\nWARNING: Current AUTO_INCREMENT of table $table is lower than last-merge\n\n";
+      }
     }
 
     if ($new_data) {
@@ -494,18 +496,24 @@ function dbscripts_table_increment($table, $branch) {
   $branch_location = "$dump_path/$branch";
 
   $increment = FALSE;
-  if (exec("grep 'AUTO_INCREMENT=' $branch_location/tables/$table.sql")) {
-    $inc_string = exec("grep 'AUTO_INCREMENT=' $branch_location/tables/$table.sql");
-    $inc_string_parts = explode(' ', $inc_string);
-    foreach ($inc_string_parts as $part) {
-      if (strpos($part, 'AUTO_INCREMENT=') !== FALSE) {
-        $increment['num'] = str_replace('AUTO_INCREMENT=', '', $part);
+  if(file_exists("$branch_location/tables/$table.sql")) {
+    if (exec("grep 'auto_increment' $branch_location/tables/$table.sql")) {
+      $inc_string = exec("grep 'AUTO_INCREMENT=' $branch_location/tables/$table.sql");
+      if ($inc_string) {
+        $inc_string_parts = explode(' ', $inc_string);
+        foreach ($inc_string_parts as $part) {
+          if (strpos($part, 'AUTO_INCREMENT=') !== FALSE) {
+            $increment['num'] = str_replace('AUTO_INCREMENT=', '', $part);
+          }
+        }
+      } else {
+      	$increment['num'] = '0';
       }
-    }
 
-    $id_string = exec("grep auto_increment $branch_location/tables/$table.sql");
-    $id_string_parts = explode('`', $id_string);
-    $increment['id'] = $id_string_parts[1];
+      $id_string = exec("grep auto_increment $branch_location/tables/$table.sql");
+      $id_string_parts = explode('`', $id_string);
+      $increment['id'] = $id_string_parts[1];
+    }
   }
 
   return $increment;
