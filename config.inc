@@ -24,10 +24,7 @@ $mysqldump = 'mysqldump';
 // Charset location
 $charsets = '/usr/local/share/mysql/charsets';
 
-
-/**
- * Database type (mysql, mysqli)
- */
+//Database type (mysql, mysqli)
 $dbtype = 'mysqli';
 
 
@@ -60,7 +57,7 @@ $tables_filtered_l2 =  array(
   'aggregator_item',
   'aggregator_category_item',
   'comments',
-  'node_comment_statistics',
+  'comment_notify',
   'fivestar_comment',
   'flood',
   'history',
@@ -81,7 +78,6 @@ $tables_filtered_l2 =  array(
  * Classifying Tables
  * Should the data be taken from development, production, or be merged from the two
  */
-
 
 // Tables that contain content to be merged from both development and production
 $tables_merge = array(
@@ -113,12 +109,13 @@ $tables_merge = array(
   'term_synonym',
   'upload',
   'url_alias',
+  'users',
+  'users_roles',
   'vocabulary',
   'vocabulary_node_types',
   'webform_submissions',
   'webform_submitted_data',
 );
-
 
 // Tables that contain content to be taken from production
 // Will override any data made during development
@@ -141,64 +138,6 @@ $tables_override = array(
   'search_node_links',
   'search_total',
   'sessions',
-  'users',
-  'users_roles',
   'votingapi_vote',
   'watchdog',
-);
-
-// Tables that contain content to be taken from development
-// Will override any data made during production (so don't change this data in
-//   production!)
-// This array actually doesn't do anything in the script, it's just here for the
-//   sake of development information
-$tables_structure = array(
-  'access',
-  'actions',
-  'actions_aid',
-  'advanced_help_index',
-  'batch',
-  'blocks',
-  'blocks_roles',
-  'boxes',
-  'contact',
-  'content_group',
-  'content_group_fields',
-  'content_node_field',
-  'content_node_field_instance',
-  'filters',
-  'filter_formats',
-  'imagecache_action',
-  'imagecache_preset',
-  'languages',
-  'locales_source',
-  'locales_target',
-  'menu_custom',
-  'menu_router',
-  'node_type',
-  'permission',
-  'profile_fields',
-  'role',
-  'system',
-  'trigger_assignments',
-  'variable',
-  'views_display',
-  'views_view',
-  'webform',
-  'webform_component',
-  'webform_roles',
-);
-
-
-// SQL comments that should not be unset
-// you probably don't need to edit this
-$sql_comment_unset = array(
-  '..!40103 SET TIME_ZONE=@OLD_TIME_ZONE ..;',
-  '..!40101 SET SQL_MODE=@OLD_SQL_MODE ..;',
-  '..!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS ..;',
-  '..!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;',
-  '..!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT ..;',
-  '..!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS ..;',
-  '..!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION ..;',
-  '..!40111 SET SQL_NOTES=@OLD_SQL_NOTES ..;',
 );
