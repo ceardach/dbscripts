@@ -564,6 +564,65 @@ function dbscripts_tables_with_increment($branch, $filter_option = "full") {
 
 
 /**
+ * Find all references for the given table
+ *
+ * @param $table
+ *    Table to find all references of
+ * @param $branch
+ *    Branch to check
+ * @param $filter_option
+ *    What degree of filtering should be done on the tables returned, just
+ *    like when dumping and restoring.
+ */
+function dbscripts_table_references($table, $branch, $filter_option = "full") {
+  require('config.inc');
+
+  // Set location
+  $branch_location = "$dump_path/$branch";
+  $temp_location = "$dump_path/tmp";
+
+  // Set the filtering options, ignoring tables not being tracked
+  $tables_ignored = array(array($table)); // avoid false positives
+  switch($filter_option){
+    case 'none':
+      break;
+
+    case 'min':
+      $tables_ignored = array_merge($tables_filtered, $tables_filtered_l1, array($table));
+      break;
+
+    default:
+      $tables_ignored = array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2, array($table));
+      break;
+  }
+
+  // List of tables to check
+  $table_list = dbscripts_process_tables($branch, $tables_ignored);
+
+  // Get the id name of the table
+  $increment = dbscripts_table_increment($table, $branch);
+  $id = isset($increment['id']) ? $increment['id'] : FALSE;
+
+  $list = FALSE;
+  if ($id) {
+    foreach ($table_list as $check_table) {
+    	exec("grep '^  `' $branch_location/tables/$check_table.sql > $temp_location/columns.sql");
+      $columns = file("$temp_location/columns.sql", FILE_IGNORE_NEW_LINES);
+      foreach ($columns as $column) {
+      	$parts = explode('`', $column);
+        if (strpos($parts[1], $id) !== FALSE) {
+        	$list[$check_table][] = $parts[1];
+        }
+      }
+      exec("rm $temp_location/columns.sql");
+    }
+  }
+
+  return $list;
+}
+
+
+/**
  * Return help for each script
  *
  * @param $script
