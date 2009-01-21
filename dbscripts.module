@@ -4,9 +4,7 @@
   TODO
 
   Readjust working space sequences to latest dev snapshot
-  Grab sequences as last line of file?
 
-  Merge by copying schema and data files for non-merge content
   Merge content as normal
   Restore&Dump only modified/merged tables
     check diff, and flag to be restored and dumped
