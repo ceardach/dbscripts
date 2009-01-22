@@ -18,6 +18,7 @@ $tables_standalone = array(
   'filters', // references are to filter_formats.format
   'permission',
   'url_alias',
+  'blogapi_files', // this should not be a standalone table
 );
 
 // Tables that are referenced by other tables
@@ -67,22 +68,6 @@ $tables_referenced = array(
     ),
     'false positives' => array (
       'book' => array('bid'),
-    ),
-  ),
-
-  // This is apparently not hooked into files.fid
-  'blogapi_files' => array(
-    'references' => array(
-    ),
-    'false positives' => array (
-      'aggregator_category_feed' => array('fid'),
-
-      // Assuming all files.fid related are not related to this
-      'content_field_.*' => array('field_*_fid'),
-      'content_type_.*' => array('field_*_fid'),
-      'image' => array('fid'),
-      'profile_values' => array('fid'),
-      'upload' => array('fid'),
     ),
   ),
 
@@ -143,10 +128,8 @@ $tables_referenced = array(
   'node' => array(
     'references' => array(
       'book' => array('nid'),
-      'content_field_.*' => array('nid'),
-      'content_field_.*' => array('field_*_nid'),
-      'content_type_.*' => array('nid'),
-      'content_type_.*' => array('field_*_nid'),
+      'content_field_.*' => array('nid', 'field_*_nid'),
+      'content_type_.*' => array('nid', 'field_*_nid'),
       'forum' => array('nid'),
       'image' => array('nid'),
       'img_assist_map' => array('nid', 'iid'),
