@@ -570,6 +570,11 @@ function dbscripts_find_tables_with_increment($branch, $filter_option = "full") 
  * Helper script to make it easier to discover if there are possible references
  * to a given table.
  *
+ * DOES NOT GAURANTEE TO FIND ALL REFERENCES
+ * This is merely a tool to assist you in narrowing down possibilities and provide a
+ * first level of error checking for dbscripts_get_table_references.  It is your
+ * responsibility to ensure all actual references are recorded in config.references.inc
+ *
  * @param $table
  *    Table to find all references of
  * @param $branch
@@ -631,6 +636,165 @@ function dbscripts_find_possible_table_references($table, $branch, $filter_optio
   }
 
   return $list;
+}
+
+
+/**
+ * Return actual references to a given table
+ *
+ * Checks against dbscripts_find_possible_table_references to ensure there are no
+ * obvious tables that could have been missed during development.  Update settings
+ * in config.reference.inc to reflect any new references and false positives.
+ *
+ * DOES NOT GUARANTEE TO RETURN ALL REFERENCES
+ * It only returns what is configured in config.reference.inc, and checks that
+ * configuration against dbscripts_find_possible_table_references for *possible*
+ * matches that you may have missed during development.  It is your responcibility
+ * to check the database schema for references (such as by checking the diff after
+ * a change).
+ *
+ * @param $table
+ *    Table to find all references of
+ * @param $branch
+ *    Branch to check
+ * @param $filter_option
+ *    What degree of filtering should be done on the tables returned, just
+ *    like when dumping and restoring.
+ */
+function dbscripts_get_table_references($table, $branch, $filter_option = 'full') {
+  require('config.inc');
+  require('config.references.inc');
+
+  $branch_location = "$dump_path/$branch";
+  $temp_location = "$dump_path/tmp";
+  $increment = dbscripts_get_table_increment($table, $branch);
+
+  // Check if the branch exists, otherwise fail
+  if (!file_exists($branch_location)) {
+  	return "Branch does not exist";
+  }
+
+  // Ensure tmp directory exists
+  if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
+
+  if (!(!in_array($table, $tables_standalone) && isset($increment))) {
+    // Without an increment, or configured as standalone, we don't need to continue
+    $references = FALSE;
+  } else {
+
+    $config_references = isset($tables_referenced[$table]['references']) ? $tables_referenced[$table]['references'] : array();
+    $config_false_positive = isset($tables_referenced[$table]['false positives']) ? $tables_referenced[$table]['false positives'] : array();
+
+    // The table list file is important, so fail if it doesn't exist
+    if (!file_exists("$branch_location/table_list.txt")) {
+    	return "Branch does not have a table_list.txt file";
+    } else {
+      $table_list = file("$branch_location/table_list.txt", FILE_IGNORE_NEW_LINES);
+    }
+
+
+    // Since you can set the configuration with *'s, creating an array $references of real values
+    $references = array();
+    foreach ($table_list as $check_table) {
+      // Format possible values for the table name
+      $table_name_parts = explode("_", $check_table);
+      $check_table_1 = isset($table_name_parts[1]) ? $table_name_parts[0]."_.*" : FALSE;
+      $check_table_2 = isset($table_name_parts[2]) ? $table_name_parts[0]."_".$table_name_parts[1]."_.*" : FALSE;
+      $check_table_3 = isset($table_name_parts[3]) ? $table_name_parts[0]."_".$table_name_parts[1]."_".$table_name_parts[2]."_.*" : FALSE;
+      $possible_table_names = array($check_table, $check_table_1, $check_table_2, $check_table_3);
+
+      // Check all possible values for the table name
+      foreach ($possible_table_names as $check) {
+        if ($check && (isset($config_references[$check]) || isset($config_false_positive[$check]))) {
+          // Check to see if any of the configured column names for that table have a wildcard
+          $wildcard = FALSE;
+          if (isset($config_references[$check])) {
+            foreach ($config_references[$check] as $column) {
+              if (strpos($column, '*') !== FALSE) {
+              	$wildcard = TRUE;
+              }
+            }
+          }
+          if (isset($config_false_positive[$check])) {
+            foreach ($config_false_positive[$check] as $column) {
+              if (strpos($column, '*') !== FALSE) {
+                $wildcard = TRUE;
+              }
+            }
+          }
+
+          // If there is a wildcard, we need to find all possible matches in the table
+          if ($wildcard) {
+            // Get all columns for the given table
+            exec("grep '^  `' $branch_location/tables/$check_table.sql > $temp_location/columns.sql");
+            $column_values = file("$temp_location/columns.sql");
+
+            // Check each column
+            foreach ($column_values as $column_value) {
+              // Extract the column name
+            	$column_value_parts = explode('`', $column_value);
+              $column_name = $column_value_parts[1];
+
+              // Format other possible values for the column name
+              $column_name_parts = explode("_", $column_name);
+              $column_num_parts = count($column_name_parts);
+              $column_last_part = $column_num_parts -1;
+              $column_name_1 = isset($column_name_parts[1]) ? $column_name_parts[0]."_*" : FALSE;
+              $column_name_2 = isset($column_name_parts[2]) ? $column_name_parts[0]."_*_".$column_name_parts[$column_last_part] : FALSE;
+              $possible_column_names = array($column_name, $column_name_1, $column_name_2);
+
+              // Check all the possible column names
+              foreach ($possible_column_names as $possible_column_name) {
+                if ($possible_column_name) {
+                  if (isset($config_references[$check]) && in_array($possible_column_name, $config_references[$check])) {
+                    $references['references'][$check_table][] = $column_name;
+                  }
+                  if (isset($config_false_positive[$check]) && in_array($possible_column_name, $config_false_positive[$check])) {
+                    $references['false positives'][$check_table][] = $column_name;
+                  }
+                }
+              }
+            }
+
+            // Erase the temporary file
+            exec("rm $temp_location/columns.sql");
+
+          } else {
+          	// Without a wildcard as the column name we can just return what was configured
+            if (isset($config_references[$check])) {
+              $references['references'][$check_table] = $config_references[$check];
+            }
+            if (isset($config_false_positive[$check])) {
+              $references['false positives'][$check_table] = $config_false_positive[$check];
+            }
+          }
+
+        }
+      }
+    }
+
+    // Now checking the real values against the discovered possible references
+    $possible_references = dbscripts_find_possible_table_references($table, $branch, $filter_option);
+    if(is_array($possible_references)) {
+      foreach ($possible_references as $check_table => $check_ids) {
+        foreach ($check_ids as $check_id) {
+
+          // Check to see if the possible reference is in the references list as found above
+          $check_references = isset($references['references'][$check_table]) ? in_array($check_id, $references['references'][$check_table]) : FALSE;
+          $check_false_positive = isset($references['false positives'][$check_table]) ? in_array($check_id, $references['false positives'][$check_table]) : FALSE;
+
+          // If it is not in either, then record it under 'found'
+          if(!$check_references && !$check_false_positive) {
+            $references['found'][$check_table][] = $check_id;
+          }
+
+        }
+      }
+    }
+
+  }
+
+  return $references;
 }
 
 

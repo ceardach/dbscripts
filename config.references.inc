@@ -5,7 +5,7 @@
  */
 
 // Tables that do NOT have references elsewhere
-// Make sure these are tables you are sure won't be referenced because there will
+// Make sure these are tables you are sure will never be referenced because there will
 //    be no error checking.  If you are unsure, then place this in $tables_referenced
 //    and set 'false positives'
 $tables_standalone = array(
@@ -18,13 +18,20 @@ $tables_standalone = array(
   'filters', // references are to filter_formats.format
   'permission',
   'url_alias',
-  'blogapi_files', // this should not be a standalone table
+  'blogapi_files', // this should not have auto_increment on fid, since it is files.fid (or at least should be)
 );
 
 // Tables that are referenced by other tables
 // Error checking will be performed against this array to ensure no additional
 //    possibilies were added
 // You may also add new associations even if they are not brought up automatically
+//
+// POSSIBLE WILD CARDS
+// table_.*
+// table_name_.*
+// long_table_name_.*
+// field_*
+// field_*_type
 $tables_referenced = array(
 
   'actions_aid' => array(
@@ -64,7 +71,7 @@ $tables_referenced = array(
       // Boxes will not show up when searching for references
       //    because boxes.bid is set as auto_increment.
       // It shouldn't have auto_increment, though...
-      'boxes' => array('fid'),
+      'boxes' => array('bid'),
     ),
     'false positives' => array (
       'book' => array('bid'),
@@ -118,8 +125,8 @@ $tables_referenced = array(
 
   'menu_links' => array(
     'references' => array(
-      'menu_links' => array('plid'),
       'book' => array('mlid'),
+      'menu_links' => array('plid'),
     ),
     'false positives' => array (
     ),
@@ -161,6 +168,7 @@ $tables_referenced = array(
       'upload' => array('vid'),
     ),
     'false positives' => array (
+      // I can't think of a case where a field would refer to a revision
       'content_field_.*' => array('field_*'),
       'content_type_.*' => array('field_*'),
       'term_data' => array('vid'),
@@ -175,6 +183,7 @@ $tables_referenced = array(
     ),
     'false positives' => array (
       'aggregator_category_feed' => array('fid'),
+      // We can safely assume all fid will refer to files.fid and not this table
       'content_field_.*' => array('field_*'),
       'content_type_.*' => array('field_*'),
       'image' => array('fid'),
@@ -229,6 +238,7 @@ $tables_referenced = array(
       'views_display' => array('vid'),
     ),
     'false positives' => array (
+      // Not filtering field_* because it could want field_*_vid for referencing views
       'content_field_.*' => array('vid', 'field_*_nid', 'field_*_fid', 'field_*_list', 'field_*_data'),
       'content_type_.*' => array('vid', 'field_*_nid', 'field_*_fid', 'field_*_list', 'field_*_data'),
       'forum' => array('vid'),
@@ -247,6 +257,7 @@ $tables_referenced = array(
       'vocabulary_node_types' => array('vid'),
     ),
     'false positives' => array (
+      // Not filtering field_* because it could want field_*_vid for referencing vocabularies
       'content_field_.*' => array('vid', 'field_*_nid', 'field_*_fid', 'field_*_list', 'field_*_data'),
       'content_type_.*' => array('vid', 'field_*_nid', 'field_*_fid', 'field_*_list', 'field_*_data'),
       'forum' => array('vid'),
