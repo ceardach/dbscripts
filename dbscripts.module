@@ -160,8 +160,14 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   if (exec("ls $workspace_location/tables")) exec("rm $workspace_location/tables/*");
   exec("mv $temp_location/* $workspace_location/tables");
 
-  // Dump the data of all tables we're tracking
+  // Get tables to be dumped by removing $tables_cleared from the list of all tables
   $tables_dumped = dbscripts_process_tables("workspace/last-dump", $tables_cleared);
+  if (!is_array($tables_dumped)) {
+    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
+    return "\n$tables_dumped\n\n";
+  }
+
+  // Dump the data of all tables we're tracking
   foreach ($tables_dumped as $table) {
     // get the table's increment both currently, and last-merge and compare
     $increment_current = dbscripts_table_increment($table, 'workspace/last-dump');
@@ -319,8 +325,14 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
   // Erase the database so any tables that were removed stay removed
   dbscripts_erase($filter_option);
 
-  // Restore each database file
+  // Get a list of tables to restore by removing $tables_preserved from the list of all tables
   $tables_restored = dbscripts_process_tables($branch, $tables_preserved);
+  if (!is_array($tables_restored)) {
+    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
+  	return "\n$tables_restored\n\n";
+  }
+
+  // Restore each database file
   foreach ($tables_restored as $table) {
     if (file_exists("$dump_location/tables/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/tables/$table.sql");
     if (file_exists("$dump_location/data/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/data/$table.sql");
@@ -390,10 +402,19 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
   // Creating merge folders
   if (!file_exists($merge_location)) exec("mkdir -p $merge_location/tables $merge_location/data");
 
-  // Define the tables
+  // Define the tables, fail if they don't return arrays
   $tables_content = dbscripts_process_tables($dev_branch, $tables_merge, FALSE);
+  if (!is_array($tables_content)) {
+  	return "\n$tables_content\n\n";
+  }
   $tables_prod = dbscripts_process_tables($prod_branch, $tables_override, FALSE);
+  if (!is_array($tables_prod)) {
+    return "\n$tables_prod\n\n";
+  }
   $tables_dev = dbscripts_process_tables($dev_branch, array_merge($tables_merge, $tables_override));
+  if (!is_array($tables_dev)) {
+    return "\n$tables_dev\n\n";
+  }
 
   // Move all development tables and data to the temp merge location
   foreach ($tables_dev as $table) {
@@ -422,6 +443,10 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
 
   // Dev and last-merge do not need to be bothered with all the data
   $tables_dev_data = dbscripts_process_tables($dev_branch, array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2));
+  if (!is_array($tables_dev_data)) {
+    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
+    return "\n$tables_dev_data\n\n";
+  }
   foreach ($tables_dev_data as $table) {
   	if (file_exists("$merge_location/data/$table.sql")) exec("cp $merge_location/data/$table.sql $dev_location/data");
   }
@@ -551,6 +576,10 @@ function dbscripts_find_tables_with_increment($branch, $filter_option = "full") 
   }
 
   $table_list = dbscripts_process_tables($branch, $tables_ignored);
+  if (!is_array($table_list)) {
+    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
+    return $table_list;
+  }
 
   $list = array();
   foreach ($table_list as $table) {
@@ -607,6 +636,10 @@ function dbscripts_find_possible_table_references($table, $branch, $filter_optio
 
   // List of tables to check
   $table_list = dbscripts_process_tables($branch, $tables_ignored);
+  if (!is_array($table_list)) {
+    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
+    return $table_list;
+  }
 
   // Get the id name of the table
   $increment = dbscripts_get_table_increment($table, $branch);
