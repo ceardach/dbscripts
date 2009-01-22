@@ -21,11 +21,11 @@
       $list = array();
     	if(isset($options[2]) && $options[2] != 'all') {
         $table = $options[2];
-        $list = dbscripts_table_references($table, $branch, $filter_option);
+        $list = dbscripts_find_possible_table_references($table, $branch, $filter_option);
     	} else {
         $table_list = dbscripts_find_tables_with_increment($branch, $filter_option);
         foreach ($table_list as $table) {
-        	$references = dbscripts_table_references($table, $branch, $filter_option);
+        	$references = dbscripts_find_possible_table_references($table, $branch, $filter_option);
           if ($references) {
           	$list[$table] = $references;
           }

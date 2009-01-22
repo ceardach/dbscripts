@@ -565,7 +565,10 @@ function dbscripts_find_tables_with_increment($branch, $filter_option = "full") 
 
 
 /**
- * Find all references for the given table
+ * Find all possible references for the given table
+ *
+ * Helper script to make it easier to discover if there are possible references
+ * to a given table.
  *
  * @param $table
  *    Table to find all references of
@@ -575,7 +578,7 @@ function dbscripts_find_tables_with_increment($branch, $filter_option = "full") 
  *    What degree of filtering should be done on the tables returned, just
  *    like when dumping and restoring.
  */
-function dbscripts_table_references($table, $branch, $filter_option = "full") {
+function dbscripts_find_possible_table_references($table, $branch, $filter_option = "full") {
   require('config.inc');
 
   // Set location
