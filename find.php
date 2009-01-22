@@ -9,7 +9,7 @@
     if (isset($options[1]) && $options[1] == 'increment') {
       $branch = isset($options[2]) ? $options[2] : 'development';
       $filter_option = isset($options[3]) ? $options[3] : 'full';
-      $list = dbscripts_tables_with_increment($branch, $filter_option);
+      $list = dbscripts_find_tables_with_increment($branch, $filter_option);
       print_r($list);
 
     } elseif (isset($options[1]) && $options[1] == 'references') {
@@ -23,7 +23,7 @@
         $table = $options[2];
         $list = dbscripts_table_references($table, $branch, $filter_option);
     	} else {
-        $table_list = dbscripts_tables_with_increment($branch, $filter_option);
+        $table_list = dbscripts_find_tables_with_increment($branch, $filter_option);
         foreach ($table_list as $table) {
         	$references = dbscripts_table_references($table, $branch, $filter_option);
           if ($references) {

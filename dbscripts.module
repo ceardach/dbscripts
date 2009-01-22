@@ -529,7 +529,7 @@ function dbscripts_get_table_increment($table, $branch) {
  *    What degree of filtering should be done on the tables returned, just
  *    like when dumping and restoring.
  */
-function dbscripts_tables_with_increment($branch, $filter_option = "full") {
+function dbscripts_find_tables_with_increment($branch, $filter_option = "full") {
   require('config.inc');
 
   // Set location
