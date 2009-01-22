@@ -26,11 +26,16 @@
         $list = dbscripts_find_possible_table_references($table, $branch, $filter_option);
     	} else {
         $table_list = dbscripts_find_tables_with_increment($branch, $filter_option);
-        foreach ($table_list as $table) {
-        	$references = dbscripts_find_possible_table_references($table, $branch, $filter_option);
-          if ($references) {
-          	$list[$table] = $references;
+        if (is_array($table_list)) {
+          foreach ($table_list as $table) {
+          	$references = dbscripts_find_possible_table_references($table, $branch, $filter_option);
+            if ($references) {
+            	$list[$table] = $references;
+            }
           }
+        } else {
+          // If not an array, pass through the error message
+        	print "\n$table_list\n\n";
         }
     	}
       print_r($list);
