@@ -13,12 +13,17 @@
   Have script to complete merge process after conflict (merge.php finish)
 **/
 
+
 /**
  * Get the database connection settings from settings.php file
  */
 function dbscripts_db_connect() {
   require('config.inc');
   require("$settings_path/settings.php");
+
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+  if (!isset($db_url)) return "The file 'settings.php' file does not exist.";
 
   preg_match('/'.$dbtype.':\/\/([^:]+):([^@]+)@([^\/]+)\/(.+)/', $db_url, $db_settings);
 
@@ -101,6 +106,9 @@ function dbscripts_get_options($argv) {
  */
 function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   require('config.inc');
+
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
 
   $db_connection_settings = dbscripts_db_connect();
   if (!$db_connection_settings) {
@@ -229,6 +237,9 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
 function dbscripts_erase($filter_option = 'full') {
   require('config.inc');
 
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+
   $db_connection_settings = dbscripts_db_connect();
   if (!$db_connection_settings) {
     return "\nImproper database connection settings.\n\n";
@@ -290,6 +301,9 @@ function dbscripts_erase($filter_option = 'full') {
  */
 function dbscripts_restore($branch = 'development', $filter_option = 'full') {
   require('config.inc');
+
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
 
   $db_connection_settings = dbscripts_db_connect();
   if (!$db_connection_settings) {
@@ -367,6 +381,9 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
  */
 function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-merge', $prod_branch = 'production') {
   require('config.inc');
+
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
 
   $message = "WARNING: This merge only merges tables, not data\n\n";
 
@@ -477,6 +494,9 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
 function dbscripts_process_tables($branch, $tables_compare, $remove_match = TRUE) {
   require('config.inc');
 
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+
   // Set location
   $branch_location = "$dump_path/$branch";
 
@@ -531,6 +551,9 @@ function dbscripts_process_tables($branch, $tables_compare, $remove_match = TRUE
 function dbscripts_get_table_increment($table, $branch) {
   require('config.inc');
 
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+
   $branch_location = "$dump_path/$branch";
 
   // Check if the branch exists, otherwise fail
@@ -574,6 +597,9 @@ function dbscripts_get_table_increment($table, $branch) {
  */
 function dbscripts_find_tables_with_increment($branch, $filter_option = "full") {
   require('config.inc');
+
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
 
   // Set location
   $branch_location = "$dump_path/$branch";
@@ -640,6 +666,9 @@ function dbscripts_find_tables_with_increment($branch, $filter_option = "full") 
  */
 function dbscripts_find_possible_table_references($table, $branch, $filter_option = "full") {
   require('config.inc');
+
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
 
   // Set locations
   $branch_location = "$dump_path/$branch";
@@ -739,6 +768,10 @@ function dbscripts_find_possible_table_references($table, $branch, $filter_optio
 function dbscripts_get_table_references($table, $branch, $filter_option = 'full') {
   require('config.inc');
   require('config.references.inc');
+
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+  if (!isset($tables_referenced)) return "The file 'config.references.inc' does not exist.  Copy from the example version?";
 
   // Set locations
   $branch_location = "$dump_path/$branch";
@@ -889,6 +922,7 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
  */
 function dbscripts_help($script) {
   require('config.inc');
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
 
   switch ($script) {
 
