@@ -607,8 +607,11 @@ function dbscripts_find_tables_with_increment($branch, $filter_option = "full") 
   $list = array();
   foreach ($table_list as $table) {
     $increment = dbscripts_get_table_increment($table, $branch);
-    if ($increment) {
+    if ($increment && is_array($increment)) {
       $list[] = $table;
+    } elseif ($increment != FALSE) {
+      // If not FALSE and not an array, then fail and pass through the error message
+    	return $increment;
     }
   }
 
@@ -674,6 +677,10 @@ function dbscripts_find_possible_table_references($table, $branch, $filter_optio
 
   // Get the id name of the table
   $increment = dbscripts_get_table_increment($table, $branch);
+  if (!is_array($increment) && $increment != FALSE) {
+    // If not FALSE and not an array, then fail and pass through the error message
+  	return $increment;
+  }
   $id = isset($increment['id']) ? $increment['id'] : FALSE;
 
   $list = FALSE;
@@ -681,6 +688,10 @@ function dbscripts_find_possible_table_references($table, $branch, $filter_optio
     foreach ($table_list as $check_table) {
       // Ensure this table doesn't use the same ID name for auto increment as well
       $match_increment = dbscripts_get_table_increment($check_table, $branch);
+      if (!is_array($match_increment) && $match_increment != FALSE) {
+        // If not FALSE and not an array, then fail and pass through the error message
+        return $match_increment;
+      }
       $match_id = isset($match_increment['id']) ?  $match_increment['id'] : FALSE;
 
       if ($match_id != $id) {
@@ -742,6 +753,10 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
   if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
 
   $increment = dbscripts_get_table_increment($table, $branch);
+  if (!is_array($increment) && $increment != FALSE) {
+    // If not FALSE and not an array, then fail and pass through the error message
+    return $increment;
+  }
 
   if (!(!in_array($table, $tables_standalone) && isset($increment))) {
     // Without an increment, or configured as standalone, we don't need to continue
