@@ -870,6 +870,9 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
 
         }
       }
+    } else {
+    	// If an array is not returned, then pass through the error message
+      return $possible_references;
     }
 
   }

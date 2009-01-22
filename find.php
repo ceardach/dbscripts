@@ -29,7 +29,7 @@
         if (is_array($table_list)) {
           foreach ($table_list as $table) {
           	$references = dbscripts_find_possible_table_references($table, $branch, $filter_option);
-            if ($references) {
+            if (is_array($references)) {
             	$list[$table] = $references;
             }
           }
