@@ -477,7 +477,20 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
 function dbscripts_process_tables($branch, $tables_compare, $remove_match = TRUE) {
   require('config.inc');
 
-  $tables = file("$dump_path/$branch/table_list.txt", FILE_IGNORE_NEW_LINES);
+  // Set location
+  $branch_location = "$dump_path/$branch";
+
+  // Check if the branch exists, otherwise fail
+  if (!file_exists($branch_location)) {
+    return "The branch '$branch' does not exist";
+  }
+
+  // Check if the table list file exists, otherwise fail
+  if (!file_exists("$branch_location/table_list.txt")) {
+    return "The branch '$branch' does not have a table_list.txt file";
+  }
+
+  $tables = file("$branch_location/table_list.txt", FILE_IGNORE_NEW_LINES);
   $tables_match = array();
 
   foreach ($tables as $key => $table) {
@@ -520,6 +533,11 @@ function dbscripts_get_table_increment($table, $branch) {
 
   $branch_location = "$dump_path/$branch";
 
+  // Check if the branch exists, otherwise fail
+  if (!file_exists($branch_location)) {
+    return "The branch '$branch' does not exist";
+  }
+
   $increment = FALSE;
   if(file_exists("$branch_location/tables/$table.sql")) {
     if (exec("grep 'auto_increment' $branch_location/tables/$table.sql")) {
@@ -559,6 +577,11 @@ function dbscripts_find_tables_with_increment($branch, $filter_option = "full") 
 
   // Set location
   $branch_location = "$dump_path/$branch";
+
+  // Check if the branch exists, otherwise fail
+  if (!file_exists($branch_location)) {
+    return "The branch '$branch' does not exist";
+  }
 
   // Set the filtering options, ignoring tables not being tracked
   $tables_ignored = array();
@@ -615,9 +638,17 @@ function dbscripts_find_tables_with_increment($branch, $filter_option = "full") 
 function dbscripts_find_possible_table_references($table, $branch, $filter_option = "full") {
   require('config.inc');
 
-  // Set location
+  // Set locations
   $branch_location = "$dump_path/$branch";
   $temp_location = "$dump_path/tmp";
+
+  // Check if the branch exists, otherwise fail
+  if (!file_exists($branch_location)) {
+    return "The branch '$branch' does not exist";
+  }
+
+  // Ensure tmp directory exists
+  if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
 
   // Set the filtering options, ignoring tables not being tracked
   $tables_ignored = array();
@@ -698,17 +729,19 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
   require('config.inc');
   require('config.references.inc');
 
+  // Set locations
   $branch_location = "$dump_path/$branch";
   $temp_location = "$dump_path/tmp";
-  $increment = dbscripts_get_table_increment($table, $branch);
 
   // Check if the branch exists, otherwise fail
   if (!file_exists($branch_location)) {
-  	return "Branch does not exist";
+  	return "The branch '$branch' does not exist";
   }
 
   // Ensure tmp directory exists
   if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
+
+  $increment = dbscripts_get_table_increment($table, $branch);
 
   if (!(!in_array($table, $tables_standalone) && isset($increment))) {
     // Without an increment, or configured as standalone, we don't need to continue
@@ -720,11 +753,10 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
 
     // The table list file is important, so fail if it doesn't exist
     if (!file_exists("$branch_location/table_list.txt")) {
-    	return "Branch does not have a table_list.txt file";
-    } else {
-      $table_list = file("$branch_location/table_list.txt", FILE_IGNORE_NEW_LINES);
+    	return "The branch '$branch' does not have a table_list.txt file";
     }
 
+    $table_list = file("$branch_location/table_list.txt", FILE_IGNORE_NEW_LINES);
 
     // Since you can set the configuration with *'s, creating an array $references of real values
     $references = array();
