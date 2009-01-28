@@ -398,6 +398,8 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
   $lastmerge_location = "$dump_path/$lastmerge_branch";
   $prod_location = "$dump_path/$prod_branch";
   $merge_location = "$temp_location/merge";
+  $process_merge_location = "$temp_location/processing";
+  $process_increment_location = "$temp_location/increment";
 
   // Ensure all the branches exist
   $missing_branch = '';
@@ -418,6 +420,8 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
 
   // Creating merge folders
   if (!file_exists($merge_location)) exec("mkdir -p $merge_location/tables $merge_location/data");
+  if (!file_exists($process_merge_location)) exec("mkdir -p $process_location");
+  if (!file_exists($process_increment_location)) exec("mkdir -p $process_location");
 
   // Define the tables, fail if they don't return arrays
   $tables_content = dbscripts_process_tables($dev_branch, $tables_merge, FALSE);
@@ -437,20 +441,77 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
   foreach ($tables_dev as $table) {
   	if (file_exists("$dev_location/tables/$table.sql")) exec("cp $dev_location/tables/$table.sql $merge_location/tables");
     if (file_exists("$dev_location/data/$table.sql")) exec("cp $dev_location/data/$table.sql $merge_location/data");
+    if (file_exists("$dev_location/data/$table-new.sql")) exec("cp $dev_location/data/$table-new.sql $merge_location/data");
   }
 
   // Move all the production tables and data to the temp merge location
   foreach ($tables_prod as $table) {
     if (file_exists("$prod_location/tables/$table.sql")) exec("cp $prod_location/tables/$table.sql $merge_location/tables");
     if (file_exists("$prod_location/data/$table.sql")) exec("cp $prod_location/data/$table.sql $merge_location/data");
+    if (file_exists("$prod_location/data/$table-new.sql")) exec("cp $prod_location/data/$table-new.sql $merge_location/data");
   }
 
-  // Since we do not have real merging, also move all production content data to temp merge location
+  // DATA MERGING
+  // Now here's the hard part: Merge the data from development into the production values
+
+  // Copy all tables to processing locations
   foreach ($tables_content as $table) {
-    if (file_exists("$prod_location/tables/$table.sql")) exec("cp $prod_location/tables/$table.sql $merge_location/tables");
-    if (file_exists("$prod_location/data/$table.sql")) exec("cp $prod_location/data/$table.sql $merge_location/data");
+    // Copy development structure to final merge location
+    if (file_exists("$dev_location/tables/$table.sql")) exec("cp $dev_location/tables/$table.sql $merge_location/tables");
+
+    // Copy production's new data to final merge location
+    if (file_exists("$prod_location/data/$table-new.sql")) exec("cp $prod_location/data/$table-new.sql $merge_location/tables/$table-new_prod.sql");
+
+    // Copy development data to have their increments processed
+    if (file_exists("$dev_location/data/$table.sql")) exec("cp $dev_location/data/$table.sql $process_increment_location/tables");
+    if (file_exists("$dev_location/data/$table-new.sql")) exec("cp $dev_location/data/$table-new.sql $process_increment_location/tables");
   }
 
+  // Raise all the increments on development's new data to be above production values
+  foreach ($tables_content as $table) {
+    // TODO
+  }
+
+  // Merge existing data
+  $conflict = '';
+  foreach ($tables_content as $table) {
+    // Set data paths
+    $dev_version = "$process_sequences_location/$table.sql";
+    $lastmerge_version = "$lastmerge_location/data/$table.sql";
+    $prod_version = "$prod_location/data/$table.sql";
+
+    // Merge the existing data, and put it in the tables to process
+    if (file_exists($dev_version) && file_exists($lastmerge_version) && file_exists($prod_version)) {
+      exec("diff3 -E --merge $dev_version $lastmerge_version $prod_version > $process_merge_location/$table.sql");
+      $check_conflict = exec("grep '^<<<<<<<' $process_merge_location/$table.sql");
+      if ($check_conflict) {
+         // If there is a conflict, leave the file where it is
+         $conflict .= $table."\n";
+      } else {
+        // If it merged successfully, move the file to the final merge location
+      	exec("mv $process_merge_location/$table.sql $merge_location/data/$table.sql");
+      }
+    } elseif (file_exists($dev_version) && !(file_exists($lastmerge_version) && file_exists($prod_version))) {
+      // TODO Figure out what happens when dev exists, and lastmerge and prod do not
+    } elseif (file_exists($prod_version) && !(file_exists($lastmerge_version) && file_exists($dev_version))) {
+      // TODO yes prod, no lastmerge and dev
+    } elseif (file_exists($lastmerge_version) && !(file_exists($prod_version) && file_exists($dev_version))) {
+      // TODO yes lastmerge, no prod and dev
+    } elseif (!file_exists($dev_version)) {
+      // TODO no dev, yes other
+    } elseif (!file_exists($prod_version)) {
+      // TODO no prod, yes other
+    } elseif (!file_exists($lastmerge_version)) {
+      // TODO no last merge, yes other
+    }
+  }
+
+  // If there were conflicts, fail
+  if ($conflict) {
+    return "\nWARNING: The following tables failed to merge:\n\n $conflict\n";
+  }
+
+  // MERGE COMPLETE
   // Copy this new merged version to all three branches
   exec("rm $dev_location/tables/* $dev_location/data/* $lastmerge_location/tables/* $lastmerge_location/data/* $prod_location/tables/* $prod_location/data/*");
   exec("cp $merge_location/tables/* $dev_location/tables");
