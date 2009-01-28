@@ -178,8 +178,8 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   // Dump the data of all tables we're tracking
   foreach ($tables_dumped as $table) {
     // get the table's increment both currently, and last-merge and compare
-    $increment_current = dbscripts_table_increment($table, 'workspace/last-dump');
-    $increment_lastmerge = dbscripts_table_increment($table, 'last-merge');
+    $increment_current = dbscripts_get_table_increment($table, 'workspace/last-dump');
+    $increment_lastmerge = dbscripts_get_table_increment($table, 'last-merge');
 
     $new_data = FALSE;
     if ($increment_current && $increment_lastmerge) {
