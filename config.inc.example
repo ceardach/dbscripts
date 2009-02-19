@@ -46,6 +46,7 @@ $tables_filtered =  array(
 // Tables for 'min' filtering option
 // preserved in working space
 $tables_filtered_l1 = array(
+  'masquerade',
   'sessions',
   'openid_association',
 );
