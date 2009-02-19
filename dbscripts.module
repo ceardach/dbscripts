@@ -1444,6 +1444,18 @@ SEE ALSO
 EOF;
       break;
 
+// TODO: Write help for "find"
+    case 'find':
+      $help = <<<EOF
+
+NAME
+    Find - Search for information within the database
+
+
+\n
+EOF;
+      break;
+
     default:
       $help = 'That is not a valid script.'."\n";
       break;
