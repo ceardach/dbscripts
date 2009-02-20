@@ -481,30 +481,17 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
     $prod_version = "$prod_location/data/$table.sql";
 
     // Merge the existing data, and put it in the tables to process
-    if (file_exists($dev_version) && file_exists($lastmerge_version) && file_exists($prod_version)) {
-      exec("diff3 -E --merge $dev_version $lastmerge_version $prod_version > $process_merge_location/$table.sql");
-      $check_conflict = exec("grep '^<<<<<<<' $process_merge_location/$table.sql");
-      if ($check_conflict) {
-         // If there is a conflict, leave the file where it is
-         $conflict .= $table."\n";
-      } else {
-        // If it merged successfully, move the file to the final merge location
-      	exec("mv $process_merge_location/$table.sql $merge_location/data/$table.sql");
-      }
-    } elseif (file_exists($dev_version) && !(file_exists($lastmerge_version) && file_exists($prod_version))) {
-      // TODO Figure out what happens when dev exists, and lastmerge and prod do not
-    } elseif (file_exists($prod_version) && !(file_exists($lastmerge_version) && file_exists($dev_version))) {
-      // TODO yes prod, no lastmerge and dev
-    } elseif (file_exists($lastmerge_version) && !(file_exists($prod_version) && file_exists($dev_version))) {
-      // TODO yes lastmerge, no prod and dev
-    } elseif (!file_exists($dev_version)) {
-      // TODO no dev, yes other
-    } elseif (!file_exists($prod_version)) {
-      // TODO no prod, yes other
-    } elseif (!file_exists($lastmerge_version)) {
-      // TODO no last merge, yes other
+    // Don't need to check if the branches exist... already checked above
+    exec("diff3 -E --merge $dev_version $lastmerge_version $prod_version > $process_merge_location/$table.sql");
+    $check_conflict = exec("grep '^<<<<<<<' $process_merge_location/$table.sql");
+    if ($check_conflict) {
+       // If there is a conflict, leave the file where it is
+       $conflict .= $table."\n";
+    } else {
+      // If it merged successfully, move the file to the final merge location
+    	exec("mv $process_merge_location/$table.sql $merge_location/data/$table.sql");
     }
-  }
+   }
 
   // If there were conflicts, fail
   if ($conflict) {
