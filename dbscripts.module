@@ -1260,12 +1260,9 @@ function dbscripts_raise_all_increments($dev_branch = 'development', $lastmerge_
 
     if ($start_at < $change_to) {
       // Raise the increments
-      print "\n\n$table, $start_at, $change_to";
       dbscripts_raise_table_increments($table, $start_at, $change_to, $dev_branch);
     }
   }
-
-  print "\n\n";
 
 }
 
