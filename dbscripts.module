@@ -182,7 +182,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
     $increment_lastmerge = dbscripts_get_table_increment($table, 'last-merge');
 
     $new_data = FALSE;
-    if ($increment_current && is_array($increment_current) && $increment_lastmerge && is_array($increment_lastmerge)) {
+    if ($branch != "last-merge" && $increment_current && is_array($increment_current) && $increment_lastmerge && is_array($increment_lastmerge)) {
       if ($increment_current['num'] > $increment_lastmerge['num']) {
       	$new_data = TRUE;
       } elseif ($increment_current['num'] < $increment_lastmerge['num']) {
