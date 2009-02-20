@@ -976,7 +976,7 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
  * @param $branch
  *   Branch to make the changes on.
  */
-function dbscripts_raise_increments($table, $column, $start_at, $change_to, $branch, $filter_option = 'full') {
+function dbscripts_raise_table_increments($table, $column, $start_at, $change_to, $branch, $filter_option = 'full') {
   require('config.inc');
   require('config.references.inc');
 

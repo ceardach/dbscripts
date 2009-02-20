@@ -10,5 +10,5 @@
   $branch = $options[5];
   $filter_option = $options[6];
 
-  print dbscripts_raise_increments($table, $column, $start_at, $change_to, $branch, $filter_option);
+  print dbscripts_raise_table_increments($table, $column, $start_at, $change_to, $branch, $filter_option);
 ?>
