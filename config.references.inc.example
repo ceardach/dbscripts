@@ -293,7 +293,7 @@ $tables_referenced = array(
 // You will have to manually edit this for every custom view
 $system_paths = array(
   'node' => array(
-    'patterns' => array('node/*', 'node/*/edit'),
+    'patterns' => array('node/*', 'node/*/edit', 'node/*/feed'),
     'tables' => array(
       'menu_links' => array('link_path', 'router_path'),
       'menu_router' => array('path', 'tab_parent', 'tab_root'),
@@ -302,7 +302,7 @@ $system_paths = array(
   ),
 
   'term_data' => array(
-    'patterns' => array('taxonomy/term/*'),
+    'patterns' => array('taxonomy/term/*', 'taxonomy/term/*/feed'),
     'tables' => array(
       'url_alias' => array('src'),
     ),
