@@ -1005,25 +1005,25 @@ function dbscripts_raise_increments($table, $column, $start_at, $change_to, $bra
   // increment. Use the highest increment
   $current_inc = dbscripts_get_table_increment($table, $branch);
   if (is_array($current_inc) && $current_inc['num'] > $change_to) {
-    $change_to = $current_inc++;
+    $change_to = $current_inc;
   }
   if ($start_at > $change_to) {
     $change_to = $start_at++;
   }
 
   // Get an array of the range of increments to work with
-  $increment_range = range($start_at, ($change_to - 1));
+  $increment_range = range($start_at, ($current_inc['num'] - 1));
 
   // Find all tables that use the increment
   $table_references = dbscripts_get_table_references($table, $branch, $filter_option);
+  if (!is_array($table_references)) {
+    return "\nERROR: ".$table_references."\n\n";
+  }
 
   // Fail if there are any found possible references
   if (isset($table_references['found'])) {
-    return "/nFAILED:  Possible references found/n/n".$table_references['found'];
+    return "/nFAILED:  Possible references found/n/n".$table_references['found']."\n";
   }
-
-  // add the table itself to the array to work with
-  $table_references['references'][$table][] = $column;
 
   // For all references, raise the increment
   foreach ($table_references['references'] as $table_to_modify => $columns_referenced) {
