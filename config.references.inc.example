@@ -93,6 +93,7 @@ $tables_referenced = array(
 
   'filter_formats' => array(
     'references' => array(
+      'better_formats_defaults' => array('format'),
       'boxes' => array('format'),
       'content_field_.*' => array('field_*_format'),
       'content_type_.*' => array('field_*_format'),
@@ -139,6 +140,7 @@ $tables_referenced = array(
       'content_type_.*' => array('nid', 'field_*_nid'),
       'forum' => array('nid'),
       'image' => array('nid'),
+      'image_attach' => array('nid'),
       'img_assist_map' => array('nid', 'iid'),
       'node_access' => array('nid'),
       'node_revisions' => array('nid'),
@@ -195,6 +197,7 @@ $tables_referenced = array(
 
   'role' => array(
     'references' => array(
+      'better_formats_defaults' => array('rid'),
       'blocks_roles' => array('rid'),
       'permission' => array('rid'),
       'users_roles' => array('rid'),
