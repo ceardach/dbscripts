@@ -1054,7 +1054,6 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
     exec("echo \"pattern_pair_new[$key] = \\\"'$pattern'\\\"\" >> $temp_location/increment_pairs.awk");
   }
   exec("echo '}' >> $temp_location/increment_pairs.awk");
-  exec("cp $temp_location/increment_pairs.awk $temp_location/$table-increment_pairs.awk");
 
   // Find all tables that use the increment
   $table_references = dbscripts_get_table_references($table, $branch, $filter_option);
@@ -1210,6 +1209,9 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
 
     }
   }
+
+  // Delete temporary files
+  exec("rm $temp_location/increment_pairs.awk");
 
   // Since we got this far without error, we can now move
   // all the newly created sql files from temp back to the branch
