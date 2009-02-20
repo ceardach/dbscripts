@@ -16,8 +16,6 @@
 
     // Find all possible references to a given table
     } elseif (isset($options[1]) && $options[1] == 'possible-references') {
-      print "\n Please wait. This can take awhile.  'ctrl+c' to cancel.\n\n";
-
       $branch = isset($options[3]) ? $options[3] : 'development';
       $filter_option = isset($options[4]) ? $options[4] : 'full';
 
@@ -26,6 +24,7 @@
         $table = $options[2];
         $list = dbscripts_find_possible_table_references($table, $branch, $filter_option);
     	} else {
+        print "\n Please wait. This can take awhile.  'ctrl+c' to cancel.\n\n";
         $table_list = dbscripts_find_tables_with_increment($branch, $filter_option);
         if (is_array($table_list)) {
           foreach ($table_list as $table) {
@@ -61,6 +60,8 @@
         }
       } else {
         if (file_exists("$dump_path/development/table_list.txt")) {
+          print "\n Please wait. This can take awhile.  'ctrl+c' to cancel.\n\n";
+
           $all_tables = file("$dump_path/development/table_list.txt", FILE_IGNORE_NEW_LINES);
           $tables = dbscripts_process_tables('development', array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2));
           foreach ($tables as $table) {
