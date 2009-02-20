@@ -289,6 +289,8 @@ $tables_referenced = array(
 
 // System paths that have to be updated
 // The wildcard '*' symbolizes that table's primary key
+//
+// You will have to manually edit this for every custom view
 $system_paths = array(
   'node' => array(
     'patterns' => array('node/*', 'node/*/edit'),
