@@ -1190,6 +1190,82 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
 }
 
 
+
+/**
+ * Raise all increments of a given branch based on the values of the last-merge and
+ * production branches
+ *
+ * @param $dev_branch
+ *   Location of the branch you wish to make the changes on.  All actions will effect
+ *   and modify this branch.
+ * @param $lastmerge_branch
+ *   Location of the branch that was used to represent the state the
+ *   last time the other two branches were merged.  This is used as reference
+ *   to discover the start of increment rewriting.
+ * @param $prod_branch
+ *   Location of the branch that will be used as reference to discover at which point
+ *   the rewrite should start at.
+ */
+function dbscripts_raise_all_increments($dev_branch = 'development', $lastmerge_branch = 'last-merge', $prod_branch = 'production') {
+  require('config.inc');
+
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+
+  // If empty data gets sent through, reset it to defaults
+  if (!$dev_branch) $dev_branch = 'development';
+  if (!$lastmerge_branch) $lastmerge_branch = 'last-merge';
+  if (!$prod_branch) $prod_branch = 'production';
+
+  // Set all locations
+  $temp_location = "$dump_path/tmp";
+  $dev_location = "$dump_path/$dev_branch";
+  $lastmerge_location = "$dump_path/$lastmerge_branch";
+  $prod_location = "$dump_path/$prod_branch";
+
+  // Ensure all the branches exist
+  $missing_branch = '';
+  if (!file_exists($dev_location)) $missing_branch .= $dev_branch.' ';
+  if (!file_exists($lastmerge_location)) $missing_branch .= $lastmerge_branch.' ';
+  if (!file_exists($prod_location)) $missing_branch .= $prod_branch.' ';
+
+  // Cancel merge if all branches do not exist
+  if ($missing_branch) {
+    return "\nMissing database files for merge: $missing_branch\n\n";
+  }
+
+  // Ensure tmp folder exists
+  if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
+
+  // Define the tables, fail if they don't return arrays
+  if (file_exists("$dev_location/table_list.txt")) {
+    $tables = file("$dev_location/table_list.txt", FILE_IGNORE_NEW_LINES);
+  } else {
+    return "\nFAILED: Cannot find $dev_location/table_list.txt";
+  }
+
+  foreach ($tables as $table) {
+    // Find the last-merge value
+    $lastmerge_increment = dbscripts_get_table_increment($table, $lastmerge_branch);
+    $start_at = $lastmerge_increment['num'];
+
+    // Find the production value
+    $production_increment = dbscripts_get_table_increment($table, $prod_branch);
+    $change_to = $production_increment['num'];
+
+    if ($start_at < $change_to) {
+      // Raise the increments
+      print "\n\n$table, $start_at, $change_to";
+      dbscripts_raise_table_increments($table, $start_at, $change_to, $dev_branch);
+    }
+  }
+
+  print "\n\n";
+
+}
+
+
+
 /**
  * Return help for each script
  *
