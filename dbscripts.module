@@ -1138,7 +1138,7 @@ function dbscripts_raise_increments($table, $column, $start_at, $change_to, $bra
 
         // Apply the bottom comments after the new data
         foreach ($sql as $key => $line) {
-          if ($key > $data_start && !strpos($line, "INSERT INTO `$table_to_modify` VALUES")) {
+          if ($key > $data_start && !preg_match("/^INSERT INTO/", $line)) {
             $line = str_replace("'", "###@@###", $line); // issues with quotes
             exec("echo '$line' >> $temp_location/$file_name.sql");
           }
