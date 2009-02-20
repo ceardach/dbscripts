@@ -1124,23 +1124,32 @@ function dbscripts_raise_increments($table, $column, $start_at, $change_to, $bra
           }
         }
 
-        // Apply the new data after the top sql comments, converting the csv to sql along the way
-        exec("sed -e 's/^/INSERT INTO `$table_to_modify` VALUES (/g' -e 's/$/);/g' $temp_location/$file_name.csv >> $temp_location/$file_name.sql");
-
-        // Apply the bottom comments after the new data
-        foreach ($sql as $key => $line) {
-          if ($key > $data_start && !preg_match("/^INSERT INTO/", $line)) {
-            $line = str_replace("'", "###@@###", $line); // issues with quotes
-            exec("echo '$line' >> $temp_location/$file_name.sql");
-          }
-        }
-
-        // Reapply quotes
+        // Reapply quotes to the top comments
         exec("sed \"s/###@@###/'/g\" $temp_location/$file_name.sql > $temp_location/$file_name-tmp.sql");
         exec("mv $temp_location/$file_name-tmp.sql $temp_location/$file_name.sql");
 
-        // Delete the temporary csv file
+        // Apply the new data after the top sql comments, converting the csv to sql along the way
+        exec("sed -e 's/^/INSERT INTO `$table_to_modify` VALUES (/g' -e 's/$/);/g' $temp_location/$file_name.csv >> $temp_location/$file_name.sql");
+
+        // Create a file of the bottom comments
+        foreach ($sql as $key => $line) {
+          if ($key > $data_start && !preg_match("/^INSERT INTO/", $line)) {
+            $line = str_replace("'", "###@@###", $line); // issues with quotes
+            exec("echo '$line' >> $temp_location/$file_name-bottom.sql");
+          }
+        }
+
+        // Reapply quotes to the bottom comments
+        // (seperating sed statements to avoid running another sed query through the entire data)
+        exec("sed \"s/###@@###/'/g\" $temp_location/$file_name-bottom.sql > $temp_location/$file_name-tmp.sql");
+
+        // Attach the bottom comments to the end of the sql file
+        exec("cat $temp_location/$file_name-tmp.sql >> $temp_location/$file_name.sql");
+
+        // Delete the temporary files
         exec("rm $temp_location/$file_name.csv");
+        exec("rm $temp_location/$file_name-bottom.sql");
+        exec("rm $temp_location/$file_name-tmp.sql");
       }
 
     }
