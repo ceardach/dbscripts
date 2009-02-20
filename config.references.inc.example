@@ -293,8 +293,8 @@ $system_paths = array(
   'node' => array(
     'patterns' => array('node/*', 'node/*/edit'),
     'tables' => array(
-      //'menu_links' => array('link_path', 'router_path'),
-      //'menu_router' => array('path', 'tab_parent', 'tab_root'),
+      'menu_links' => array('link_path', 'router_path'),
+      'menu_router' => array('path', 'tab_parent', 'tab_root'),
       'url_alias' => array('src'),
     ),
   ),
