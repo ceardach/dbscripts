@@ -1060,48 +1060,61 @@ function dbscripts_raise_increments($table, $column, $start_at, $change_to, $bra
       $table_columns = file("$temp_location/$table_to_modify.txt", FILE_IGNORE_NEW_LINES);
       exec("rm $temp_location/$table_to_modify.txt");
 
+      // Find out the column position
+      $column_positions = array();
       foreach ($columns_referenced as $column_to_modify) {
-        // Find out the column position
-        $column_position = FALSE;
+        $found_position = FALSE;
         foreach ($table_columns as $key => $table_column) {
           if (strpos($table_column, "`$column_to_modify`")) {
-            $column_position = $key;
+            $column_positions[] = $key;
+            $found_position = TRUE;
           }
         }
-        if ($column_position === FALSE) {
+        if (!$found_position) {
           return "ERROR: Didn't find column '$column_to_modify' in '$table_to_modify' when I thought I should have.";
         }
-
-        // Raise all the increments within the given range
-        $increment_to_change = $start_at;
-        $new_increment_value = $change_to;
-        $variables = '';
-        foreach ($increment_range as $increment) {
-          $variables = "-v column=$column_position -v increment_to_change=$increment_to_change -v new_increment_value=$new_increment_value";
-
-          // Raise the increments in the csv version of the data
-          foreach ($file_names as $file_name) {
-            exec("
-                cat $temp_location/$file_name.csv | \\
-                sed \"s/\\\\\'/###@@###/g\" | \\
-                awk $variables -f $script_path/csv.awk -f $script_path/change_column_values.awk | \\
-                sed -e \"s/###@@###/\\\\\'/g\" -e 's/,$//g' \\
-                > $temp_location/$file_name-tmp.csv
-            ");
-
-            // Check if there were any errors
-            if (exec("grep '^ERROR' $temp_location/$file_name-tmp.csv")) {
-              return "ERROR: There was an error parsing the data in '$table_to_modify' as CSV.  Check the file '$temp_location/$file_name-tmp.csv'";
-            } else {
-              exec("mv $temp_location/$file_name-tmp.csv $temp_location/$file_name.csv");
-            }
-          }
-
-          // Raise increments for next pass
-          $increment_to_change++;
-          $new_increment_value++;
-        }
       }
+
+      // Set the column positions as a variable for awk
+      $column_variables = '';
+      foreach ($column_positions as $position) {
+        $column_variables .= "\ncolumns_to_change[$position] = $position\n";
+      }
+      exec("echo '#!/usr/bin/awk -f' > $temp_location/variables.awk");
+      exec("echo '{".$column_variables."}' >> $temp_location/variables.awk");
+
+      // Raise all the increments within the given range
+      $increment_to_change = $start_at;
+      $new_increment_value = $change_to;
+      $variables = '';
+      foreach ($increment_range as $increment) {
+        $variables = "-v increment_to_change=$increment_to_change -v new_increment_value=$new_increment_value";
+
+        // Raise the increments in the csv version of the data
+        foreach ($file_names as $file_name) {
+          exec("
+              cat $temp_location/$file_name.csv | \\
+              sed \"s/\\\\\'/###@@###/g\" | \\
+              awk $variables -f $script_path/csv.awk -f $temp_location/variables.awk -f $script_path/change_column_values.awk | \\
+              sed -e \"s/###@@###/\\\\\'/g\" -e 's/,$//g' \\
+              > $temp_location/$file_name-tmp.csv
+          ");
+
+          // Check if there were any errors
+          if (exec("grep '^ERROR' $temp_location/$file_name-tmp.csv")) {
+            return "ERROR: There was an error parsing the data in '$table_to_modify' as CSV.  Check the file '$temp_location/$file_name-tmp.csv'";
+          } else {
+            exec("mv $temp_location/$file_name-tmp.csv $temp_location/$file_name.csv");
+          }
+        }
+
+        // Raise increments for next pass
+        $increment_to_change++;
+        $new_increment_value++;
+      }
+
+      // Delete variable temp file
+      exec("rm $temp_location/variables.awk");
 
       // Convert the csv file back to SQL
       foreach ($file_names as $file_name) {
