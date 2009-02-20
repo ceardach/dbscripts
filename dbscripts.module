@@ -1014,6 +1014,22 @@ function dbscripts_raise_increments($table, $column, $start_at, $change_to, $bra
   // Get an array of the range of increments to work with
   $increment_range = range($start_at, ($current_inc['num'] - 1));
 
+  // Create a key=>value array of increment pairs
+  $increment_pairs = array();
+  $increment_change = $change_to;
+  foreach ($increment_range as $increment) {
+    $increment_pairs[$increment] = $increment_change;
+    $increment_change++;
+  }
+
+  // Write these increment pairs to a file for awk to use
+  exec("echo '#!/usr/bin/awk -f' > $temp_location/increment_pairs.awk");
+  exec("echo '{' >> $temp_location/increment_pairs.awk");
+  foreach ($increment_pairs as $increment => $target) {
+    exec("echo 'increment_pairs[$increment] = $target' >> $temp_location/increment_pairs.awk");
+  }
+  exec("echo '}' >> $temp_location/increment_pairs.awk");
+
   // Find all tables that use the increment
   $table_references = dbscripts_get_table_references($table, $branch, $filter_option);
   if (!is_array($table_references)) {
@@ -1080,41 +1096,29 @@ function dbscripts_raise_increments($table, $column, $start_at, $change_to, $bra
       foreach ($column_positions as $position) {
         $column_variables .= "\ncolumns_to_change[$position] = $position\n";
       }
-      exec("echo '#!/usr/bin/awk -f' > $temp_location/variables.awk");
-      exec("echo '{".$column_variables."}' >> $temp_location/variables.awk");
+      exec("echo '#!/usr/bin/awk -f' > $temp_location/columns.awk");
+      exec("echo '{".$column_variables."}' >> $temp_location/columns.awk");
 
-      // Raise all the increments within the given range
-      $increment_to_change = $start_at;
-      $new_increment_value = $change_to;
-      $variables = '';
-      foreach ($increment_range as $increment) {
-        $variables = "-v increment_to_change=$increment_to_change -v new_increment_value=$new_increment_value";
+      // Raise the increments in the csv version of the data
+      foreach ($file_names as $file_name) {
+        exec("
+            cat $temp_location/$file_name.csv | \\
+            sed \"s/\\\\\'/###@@###/g\" | \\
+            awk -f $script_path/csv.awk -f $temp_location/increment_pairs.awk -f $temp_location/columns.awk -f $script_path/change_column_values.awk | \\
+            sed -e \"s/###@@###/\\\\\'/g\" -e 's/,$//g' \\
+            > $temp_location/$file_name-tmp.csv
+        ");
 
-        // Raise the increments in the csv version of the data
-        foreach ($file_names as $file_name) {
-          exec("
-              cat $temp_location/$file_name.csv | \\
-              sed \"s/\\\\\'/###@@###/g\" | \\
-              awk $variables -f $script_path/csv.awk -f $temp_location/variables.awk -f $script_path/change_column_values.awk | \\
-              sed -e \"s/###@@###/\\\\\'/g\" -e 's/,$//g' \\
-              > $temp_location/$file_name-tmp.csv
-          ");
-
-          // Check if there were any errors
-          if (exec("grep '^ERROR' $temp_location/$file_name-tmp.csv")) {
-            return "ERROR: There was an error parsing the data in '$table_to_modify' as CSV.  Check the file '$temp_location/$file_name-tmp.csv'";
-          } else {
-            exec("mv $temp_location/$file_name-tmp.csv $temp_location/$file_name.csv");
-          }
+        // Check if there were any errors
+        if (exec("grep '^ERROR' $temp_location/$file_name-tmp.csv")) {
+          return "ERROR: There was an error parsing the data in '$table_to_modify' as CSV.  Check the file '$temp_location/$file_name-tmp.csv'";
+        } else {
+          exec("mv $temp_location/$file_name-tmp.csv $temp_location/$file_name.csv");
         }
-
-        // Raise increments for next pass
-        $increment_to_change++;
-        $new_increment_value++;
       }
 
       // Delete variable temp file
-      exec("rm $temp_location/variables.awk");
+      exec("rm $temp_location/columns.awk");
 
       // Convert the csv file back to SQL
       foreach ($file_names as $file_name) {
