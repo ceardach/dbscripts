@@ -1027,13 +1027,34 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
     $increment_change++;
   }
 
-  // Write these increment pairs to a file for awk to use
+  // If there is a system paths reference, also add the pairs
+  $pattern_pair_old = array();
+  $pattern_pair_new = array();
+  if (isset($system_paths[$table])) {
+    $i = 0;
+    foreach ($system_paths[$table]['patterns'] as $key => $pattern) {
+      foreach ($increment_pairs as $old_increment => $new_increment) {
+        $pattern_pair_old[$i] = str_replace('*', $old_increment, $pattern);
+        $pattern_pair_new[$i] = str_replace('*', $new_increment, $pattern);
+        $i++;
+      }
+    }
+  }
+
+  // Write these increment and pattern pairs to a file for awk to use
   exec("echo '#!/usr/bin/awk -f' > $temp_location/increment_pairs.awk");
   exec("echo '{' >> $temp_location/increment_pairs.awk");
   foreach ($increment_pairs as $increment => $target) {
     exec("echo 'increment_pairs[$increment] = $target' >> $temp_location/increment_pairs.awk");
   }
+  foreach ($pattern_pair_old as $key => $pattern) {
+    exec("echo \"pattern_pair_old[$key] = \\\"'$pattern'\\\"\" >> $temp_location/increment_pairs.awk");
+  }
+  foreach ($pattern_pair_new as $key => $pattern) {
+    exec("echo \"pattern_pair_new[$key] = \\\"'$pattern'\\\"\" >> $temp_location/increment_pairs.awk");
+  }
   exec("echo '}' >> $temp_location/increment_pairs.awk");
+  exec("cp $temp_location/increment_pairs.awk $temp_location/$table-increment_pairs.awk");
 
   // Find all tables that use the increment
   $table_references = dbscripts_get_table_references($table, $branch, $filter_option);
@@ -1044,6 +1065,15 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
   // Fail if there are any found possible references
   if (isset($table_references['found'])) {
     return "/nFAILED:  Possible references found/n/n".$table_references['found']."\n";
+  }
+
+  // Add system path patterns as references
+  if (isset($system_paths[$table]['tables'])) {
+    foreach ($system_paths[$table]['tables'] as $system_path_table => $system_path_columns) {
+      foreach ($system_path_columns as $system_path_column) {
+        $table_references['references'][$system_path_table][] = $system_path_column;
+      }
+    }
   }
 
   // For all references, raise the increment
