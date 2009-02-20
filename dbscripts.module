@@ -1075,22 +1075,16 @@ function dbscripts_raise_increments($table, $column, $start_at, $change_to, $bra
         // Raise all the increments within the given range
         $increment_to_change = $start_at;
         $new_increment_value = $change_to;
+        $variables = '';
         foreach ($increment_range as $increment) {
-          // Create a temporary file to hold the variables for awk
-          exec("echo '#!/usr/bin/awk -f' > $temp_location/variables.awk");
-          exec("echo '{' >> $temp_location/variables.awk");
-          exec("echo 'table = \"$table_to_modify\";' >> $temp_location/variables.awk");
-          exec("echo 'column = \"$column_position\";' >> $temp_location/variables.awk");
-          exec("echo 'increment_to_change = \"$increment_to_change\";' >> $temp_location/variables.awk");
-          exec("echo 'new_increment_value = \"$new_increment_value\";' >> $temp_location/variables.awk");
-          exec("echo '}' >> $temp_location/variables.awk");
+          $variables = "-v column=$column_position -v increment_to_change=$increment_to_change -v new_increment_value=$new_increment_value";
 
           // Raise the increments in the csv version of the data
           foreach ($file_names as $file_name) {
             exec("
                 cat $temp_location/$file_name.csv | \\
                 sed \"s/\\\\\'/###@@###/g\" | \\
-                awk -f $script_path/csv.awk -f $temp_location/variables.awk -f $script_path/change_column_values.awk | \\
+                awk $variables -f $script_path/csv.awk -f $script_path/change_column_values.awk | \\
                 sed -e \"s/###@@###/\\\\\'/g\" -e 's/,$//g' \\
                 > $temp_location/$file_name-tmp.csv
             ");
@@ -1106,9 +1100,6 @@ function dbscripts_raise_increments($table, $column, $start_at, $change_to, $bra
           // Raise increments for next pass
           $increment_to_change++;
           $new_increment_value++;
-
-          // Delete temp file
-          exec("rm $temp_location/variables.awk");
         }
       }
 
