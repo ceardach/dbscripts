@@ -1067,6 +1067,7 @@ function dbscripts_raise_increments($table, $column, $start_at, $change_to, $bra
         exec("
             grep 'INSERT INTO' $branch_location/data/$file_name.sql \\
             |sed -e 's/^INSERT INTO `$table_to_modify` VALUES (//g' -e 's/);$//g' \\
+            |sed -e 's/#/#PND#/g' -e \"s/\\\\\'/#SQ#/g\" \\
             > $temp_location/$file_name.csv
         ");
       }
@@ -1103,9 +1104,8 @@ function dbscripts_raise_increments($table, $column, $start_at, $change_to, $bra
       foreach ($file_names as $file_name) {
         exec("
             cat $temp_location/$file_name.csv | \\
-            sed \"s/\\\\\'/###@@###/g\" | \\
             awk -f $script_path/csv.awk -f $temp_location/increment_pairs.awk -f $temp_location/columns.awk -f $script_path/change_column_values.awk | \\
-            sed -e \"s/###@@###/\\\\\'/g\" -e 's/,$//g' \\
+            sed -e 's/,$//g' \\
             > $temp_location/$file_name-tmp.csv
         ");
 
@@ -1131,7 +1131,7 @@ function dbscripts_raise_increments($table, $column, $start_at, $change_to, $bra
             if (preg_match("/^INSERT INTO/", $line)){
               $data_start = $key;
             } else{
-              $line = str_replace("'", "###@@###", $line); // issues with quotes
+              $line = str_replace("'", "#SQ#", $line); // issues with quotes
               if ($key == 0) {
                 exec("echo '$line' > $temp_location/$file_name.sql");
               } else {
@@ -1142,23 +1142,27 @@ function dbscripts_raise_increments($table, $column, $start_at, $change_to, $bra
         }
 
         // Reapply quotes to the top comments
-        exec("sed \"s/###@@###/'/g\" $temp_location/$file_name.sql > $temp_location/$file_name-tmp.sql");
+        exec("sed \"s/#SQ#/'/g\" $temp_location/$file_name.sql > $temp_location/$file_name-tmp.sql");
         exec("mv $temp_location/$file_name-tmp.sql $temp_location/$file_name.sql");
 
         // Apply the new data after the top sql comments, converting the csv to sql along the way
-        exec("sed -e 's/^/INSERT INTO `$table_to_modify` VALUES (/g' -e 's/$/);/g' $temp_location/$file_name.csv >> $temp_location/$file_name.sql");
+        exec("
+          sed -e 's/^/INSERT INTO `$table_to_modify` VALUES (/g' -e 's/$/);/g' \\
+          -e \"s/#SQ#/\\\\\'/g\" -e 's/#PND#/#/g' \\
+          $temp_location/$file_name.csv >> $temp_location/$file_name.sql
+        ");
 
         // Create a file of the bottom comments
         foreach ($sql as $key => $line) {
           if ($key > $data_start && !preg_match("/^INSERT INTO/", $line)) {
-            $line = str_replace("'", "###@@###", $line); // issues with quotes
+            $line = str_replace("'", "#SQ#", $line); // issues with quotes
             exec("echo '$line' >> $temp_location/$file_name-bottom.sql");
           }
         }
 
         // Reapply quotes to the bottom comments
         // (seperating sed statements to avoid running another sed query through the entire data)
-        exec("sed \"s/###@@###/'/g\" $temp_location/$file_name-bottom.sql > $temp_location/$file_name-tmp.sql");
+        exec("sed \"s/#SQ#/'/g\" $temp_location/$file_name-bottom.sql > $temp_location/$file_name-tmp.sql");
 
         // Attach the bottom comments to the end of the sql file
         exec("cat $temp_location/$file_name-tmp.sql >> $temp_location/$file_name.sql");
