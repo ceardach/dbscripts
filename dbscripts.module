@@ -90,7 +90,7 @@ function dbscripts_get_options($argv) {
  *   'none' - NO filtering is performed whatsoever.  The entire database is
  *       dumped.
  */
-function dbscripts_dump($branch = 'development', $filter_option = 'full') {
+function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastmerge_branch = 'last-merge') {
   require('config.inc');
   require('config.references.inc');
 
@@ -104,15 +104,22 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   }
 
   $dump_location = "$dump_path/$branch";
+  $lastmerge_location = "$dump_path/$lastmerge_branch";
   $temp_location = "$dump_path/tmp";
-  $workspace_location = "$dump_path/workspace/last-dump";
+  $workspace_branch = "workspace/last-dump";
+  $workspace_location = "$dump_path/$workspace_branch";
 
   // Creating required folders
-  if (!file_exists($temp_location)) {exec("mkdir -p $temp_location");}
-  if (!file_exists("$dump_location/data")) {exec("mkdir -p $dump_location/data");}
-  if (!file_exists("$dump_location/tables")) {exec("mkdir -p $dump_location/tables");}
-  if (!file_exists("$workspace_location/tables")) {exec("mkdir -p $workspace_location/tables");}
-  if (!file_exists("$workspace_location/data")) {exec("mkdir -p $workspace_location/data");}
+  if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
+  if (!file_exists("$dump_location/data")) exec("mkdir -p $dump_location/data");
+  if (!file_exists("$dump_location/tables")) exec("mkdir -p $dump_location/tables");
+  if (!file_exists("$workspace_location/tables")) exec("mkdir -p $workspace_location/tables");
+  if (!file_exists("$workspace_location/data")) exec("mkdir -p $workspace_location/data");
+
+  $lastmerge_exists = FALSE;
+  if (file_exists("$lastmerge_location") && file_exists("$dump_location/table_list.txt")) {
+    $lastmerge_exists = TRUE;
+  }
 
   // Set the filtering options and message to be presented to the user
   $tables_cleared = array();
@@ -136,59 +143,6 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   exec("$mysqldump --add-drop-table --no-data $db_connection_settings | grep 'DROP TABLE' | sed -e \"s/DROP TABLE IF EXISTS .//g\" -e \"s/.;//g\" > $workspace_location/table_list.txt");
   $table_list = file("$workspace_location/table_list.txt", FILE_IGNORE_NEW_LINES);
 
-  // Get tables to be dumped by removing $tables_cleared from the list of all tables
-  $tables_dumped = dbscripts_process_tables("workspace/last-dump", $tables_cleared);
-  if (!is_array($tables_dumped)) {
-    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
-    return "\n$tables_dumped\n\n";
-  }
-
-  // Find out which tables contain new data, and potentially new data
-  if ($branch != "last-merge") {
-
-    // Find references for each table
-    foreach ($tables_dumped as $table) {
-      // Get the current and lastmerge increments of the table
-      $increment = dbscripts_get_table_increment($table, $branch);
-      if (isset($increment['num'])) {
-        $increment_lastmerge = dbscripts_get_table_increment($table, 'last-merge');
-      }
-
-      // Continue only if there is a possibility of new data or a reference
-      if ($increment['num'] > $increment_lastmerge['num'] && isset($tables_referenced[$table])) {
-        $references = dbscripts_get_table_references($table, $branch, $filter_option);
-        if (is_array($references) && !isset($references['found'])) {
-
-          // Compare the primary keys of the referencing table with
-          // what is a foreign key of the referenced table
-          foreach ($references['references'] as $referenced_table => $columns) {
-            $primary_keys = dbscripts_get_table_primary_keys($referenced_table, $branch);
-            if (is_array($primary_keys)) {
-              foreach ($columns as $column) {
-                if (in_array($column, $primary_keys)) {
-                  // Record the table/column pair along with the lastmerge increment value
-                  $tables_with_new_data[$referenced_table][$column] = $increment_lastmerge['num'];
-                }
-              }
-            }
-          }
-
-        } elseif (isset($references['found'])) {
-          $found[$table] = $references['found'];
-        }
-      }
-
-    }
-
-  }
-
-  // Fail if there is any found references
-  if (is_array($found)) {
-    print "FAILED: References discovered.  Please update config.references.inc";
-    print_r($found);
-    return;
-  }
-
   // These are all the special dump options that make the database diffable
   // and preserve character set
   $dump_options = "--skip-opt --add-drop-table --add-locks --create-options --quick --lock-tables --set-charset --disable-keys --order-by-primary --skip-comments --comments=FALSE --default-character-set=utf8 --character-sets-dir=$charsets --hex-blob";
@@ -199,7 +153,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   	exec("$mysqldump $dump_options --no-data $db_connection_settings --tables $table > $temp_location/$table.sql");
   }
 
-  // Check that a file actually has data, and stop it doesn't
+  // Check that a file actually has data, and stop if it doesn't
   if (file_get_contents("$temp_location/$table_list[0].sql") == '') {
     exec("rm $temp_location/*");
     return "\nEmpty data returned.  There may be a problem connecting to the database.\n\n";
@@ -209,24 +163,87 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   if (exec("ls $workspace_location/tables")) exec("rm $workspace_location/tables/*");
   exec("mv $temp_location/* $workspace_location/tables");
 
-  // Dump the data of all tables we're tracking
-  foreach ($tables_dumped as $table) {
-    // get the table's increment both currently, and last-merge and compare
-    $increment_current = dbscripts_get_table_increment($table, 'workspace/last-dump');
-    $increment_lastmerge = dbscripts_get_table_increment($table, 'last-merge');
+  // Find out which tables contain new data, and potentially new data
+  if ($branch != $lastmerge_branch && $lastmerge_exists) {
 
-    $new_data = FALSE;
-    if ($branch != "last-merge" && $increment_current && is_array($increment_current) && $increment_lastmerge && is_array($increment_lastmerge)) {
-      if ($increment_current['num'] > $increment_lastmerge['num']) {
-      	$new_data = TRUE;
-      } elseif ($increment_current['num'] < $increment_lastmerge['num']) {
-      	$message .= "\n\nWARNING: Current AUTO_INCREMENT of table $table is lower than last-merge\n\n";
+    // Get all tables that have content that would need to be merged
+    $tables_to_merge = dbscripts_process_tables($workspace_branch, $tables_merge, FALSE);
+
+    // Find references for each table
+    foreach ($tables_to_merge as $table) {
+
+      // Get the current and lastmerge increments of the table
+      $increment = dbscripts_get_table_increment($table, $workspace_branch);
+      $increment_lastmerge = dbscripts_get_table_increment($table, $lastmerge_branch);
+
+      // Continue only if there is a possibility of new data or a reference
+      if (isset($increment['num']) && isset ($increment_lastmerge['num']) && $increment['num'] > $increment_lastmerge['num']) {
+
+        // Not error checking when finding references because it takes too long
+        $references = dbscripts_get_table_references($table, $workspace_branch, $filter_option, FALSE);
+
+        // Compare the primary keys of the referencing table with
+        // the foreign keys of the referenced table
+        foreach ($references['references'] as $referenced_table => $columns) {
+          $primary_keys = dbscripts_get_table_primary_keys($referenced_table, $branch);
+          if (is_array($primary_keys)) {
+            foreach ($columns as $column) {
+              if (in_array($column, $primary_keys)) {
+                // Record the table/column pair along with the lastmerge increment value
+                $tables_with_new_data[$referenced_table][$column] = $increment_lastmerge['num'];
+              }
+            }
+          }
+        }
+
       }
+
     }
 
-    if ($new_data) {
-      exec("$mysqldump $dump_options --no-create-info $db_connection_settings --where='{$increment_lastmerge['id']}<{$increment_lastmerge['num']}' --tables $table > $temp_location/$table.sql");
-      exec("$mysqldump $dump_options --no-create-info $db_connection_settings --where='{$increment_lastmerge['id']}>={$increment_lastmerge['num']}' --tables $table > $temp_location/$table-new.sql");
+  }
+
+  // Get tables to be dumped by removing $tables_cleared from the list of all tables
+  $tables_dumped = dbscripts_process_tables($workspace_branch, $tables_cleared);
+  if (!is_array($tables_dumped)) {
+    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
+    return "\n$tables_dumped\n\n";
+  }
+
+  // Dump the data of all tables we're tracking
+  foreach ($tables_dumped as $table) {
+    if (isset($tables_with_new_data[$table])) {
+      // Create the where statements
+      $where_clause_new = '';
+      $where_clause_old = '';
+      $where_clause_new_data = array();
+      $where_clause_old_data = array();
+      foreach ($tables_with_new_data[$table] as $column => $increment) {
+        $where_clause_new_data[] = "$column>=$increment";
+        $where_clause_old_data[] = "$column<$increment";
+      }
+
+      // Where statement for new data
+      $where_clause_new = "--where='";
+      foreach ($where_clause_new_data as $key => $query) {
+        if ($key != 0) {
+          $where_clause_new .= " OR ";
+        }
+        $where_clause_new .= $query;
+      }
+      $where_clause_new .= "'";
+
+      // Where statement for old data
+      $where_clause_old .= "--where='";
+      foreach ($where_clause_old_data as $key => $query) {
+        if ($key != 0) {
+          $where_clause_old .= " AND ";
+        }
+        $where_clause_old .= $query;
+      }
+      $where_clause_old .= "'";
+
+      exec("$mysqldump $dump_options --no-create-info $db_connection_settings $where_clause_old --tables $table > $temp_location/$table.sql");
+      exec("$mysqldump $dump_options --no-create-info $db_connection_settings $where_clause_new --tables $table > $temp_location/$table-new.sql");
     } else {
       exec("$mysqldump $dump_options --no-create-info $db_connection_settings --tables $table > $temp_location/$table.sql");
     }
@@ -243,6 +260,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   exec("mv $temp_location/* $workspace_location/data");
 
   // For now we're just going to directly copy everything to $dump_location
+  // Eventually we'll actually perform a merge
   exec("rm -r $dump_location/*");
   exec("cp -R $workspace_location/* $dump_location");
 
@@ -922,7 +940,7 @@ function dbscripts_find_possible_table_references($table, $branch, $filter_optio
  *    What degree of filtering should be done on the tables returned, just
  *    like when dumping and restoring.
  */
-function dbscripts_get_table_references($table, $branch, $filter_option = 'full') {
+function dbscripts_get_table_references($table, $branch, $filter_option = 'full', $error_check = TRUE) {
   require('config.inc');
   require('config.references.inc');
 
@@ -1041,25 +1059,27 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
     }
 
     // Now checking the real values against the discovered possible references
-    $possible_references = dbscripts_find_possible_table_references($table, $branch, $filter_option);
-    if(is_array($possible_references)) {
-      foreach ($possible_references as $check_table => $check_ids) {
-        foreach ($check_ids as $check_id) {
+    if ($error_check) {
+      $possible_references = dbscripts_find_possible_table_references($table, $branch, $filter_option);
+      if(is_array($possible_references)) {
+        foreach ($possible_references as $check_table => $check_ids) {
+          foreach ($check_ids as $check_id) {
 
-          // Check to see if the possible reference is in the references list as found above
-          $check_references = isset($references['references'][$check_table]) ? in_array($check_id, $references['references'][$check_table]) : FALSE;
-          $check_false_positive = isset($references['false positives'][$check_table]) ? in_array($check_id, $references['false positives'][$check_table]) : FALSE;
+            // Check to see if the possible reference is in the references list as found above
+            $check_references = isset($references['references'][$check_table]) ? in_array($check_id, $references['references'][$check_table]) : FALSE;
+            $check_false_positive = isset($references['false positives'][$check_table]) ? in_array($check_id, $references['false positives'][$check_table]) : FALSE;
 
-          // If it is not in either, then record it under 'found'
-          if(!$check_references && !$check_false_positive) {
-            $references['found'][$check_table][] = $check_id;
+            // If it is not in either, then record it under 'found'
+            if(!$check_references && !$check_false_positive) {
+              $references['found'][$check_table][] = $check_id;
+            }
+
           }
-
         }
+      } else {
+      	// If an array is not returned, then pass through the error message
+        return $possible_references;
       }
-    } else {
-    	// If an array is not returned, then pass through the error message
-      return $possible_references;
     }
 
   }
