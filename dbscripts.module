@@ -92,9 +92,11 @@ function dbscripts_get_options($argv) {
  */
 function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   require('config.inc');
+  require('config.references.inc');
 
   // Ensure required files are loaded
   if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+  if (!isset($tables_referenced)) return "The file 'config.references.inc' does not exist.  Copy from the example version?";
 
   $db_connection_settings = dbscripts_db_connect();
   if (!$db_connection_settings) {
@@ -134,6 +136,59 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   exec("$mysqldump --add-drop-table --no-data $db_connection_settings | grep 'DROP TABLE' | sed -e \"s/DROP TABLE IF EXISTS .//g\" -e \"s/.;//g\" > $workspace_location/table_list.txt");
   $table_list = file("$workspace_location/table_list.txt", FILE_IGNORE_NEW_LINES);
 
+  // Get tables to be dumped by removing $tables_cleared from the list of all tables
+  $tables_dumped = dbscripts_process_tables("workspace/last-dump", $tables_cleared);
+  if (!is_array($tables_dumped)) {
+    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
+    return "\n$tables_dumped\n\n";
+  }
+
+  // Find out which tables contain new data, and potentially new data
+  if ($branch != "last-merge") {
+
+    // Find references for each table
+    foreach ($tables_dumped as $table) {
+      // Get the current and lastmerge increments of the table
+      $increment = dbscripts_get_table_increment($table, $branch);
+      if (isset($increment['num'])) {
+        $increment_lastmerge = dbscripts_get_table_increment($table, 'last-merge');
+      }
+
+      // Continue only if there is a possibility of new data or a reference
+      if ($increment['num'] > $increment_lastmerge['num'] && isset($tables_referenced[$table])) {
+        $references = dbscripts_get_table_references($table, $branch, $filter_option);
+        if (is_array($references) && !isset($references['found'])) {
+
+          // Compare the primary keys of the referencing table with
+          // what is a foreign key of the referenced table
+          foreach ($references['references'] as $referenced_table => $columns) {
+            $primary_keys = dbscripts_get_table_primary_keys($referenced_table, $branch);
+            if (is_array($primary_keys)) {
+              foreach ($columns as $column) {
+                if (in_array($column, $primary_keys)) {
+                  // Record the table/column pair along with the lastmerge increment value
+                  $tables_with_new_data[$referenced_table][$column] = $increment_lastmerge['num'];
+                }
+              }
+            }
+          }
+
+        } elseif (isset($references['found'])) {
+          $found[$table] = $references['found'];
+        }
+      }
+
+    }
+
+  }
+
+  // Fail if there is any found references
+  if (is_array($found)) {
+    print "FAILED: References discovered.  Please update config.references.inc";
+    print_r($found);
+    return;
+  }
+
   // These are all the special dump options that make the database diffable
   // and preserve character set
   $dump_options = "--skip-opt --add-drop-table --add-locks --create-options --quick --lock-tables --set-charset --disable-keys --order-by-primary --skip-comments --comments=FALSE --default-character-set=utf8 --character-sets-dir=$charsets --hex-blob";
@@ -144,7 +199,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   	exec("$mysqldump $dump_options --no-data $db_connection_settings --tables $table > $temp_location/$table.sql");
   }
 
-  // Check that a file actually has data, and stop if it doesn't
+  // Check that a file actually has data, and stop it doesn't
   if (file_get_contents("$temp_location/$table_list[0].sql") == '') {
     exec("rm $temp_location/*");
     return "\nEmpty data returned.  There may be a problem connecting to the database.\n\n";
@@ -153,13 +208,6 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   // Move the table files to the working space's last dump
   if (exec("ls $workspace_location/tables")) exec("rm $workspace_location/tables/*");
   exec("mv $temp_location/* $workspace_location/tables");
-
-  // Get tables to be dumped by removing $tables_cleared from the list of all tables
-  $tables_dumped = dbscripts_process_tables("workspace/last-dump", $tables_cleared);
-  if (!is_array($tables_dumped)) {
-    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
-    return "\n$tables_dumped\n\n";
-  }
 
   // Dump the data of all tables we're tracking
   foreach ($tables_dumped as $table) {
