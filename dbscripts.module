@@ -568,7 +568,7 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
         exec("sed \"s/#SQ#/\\'/g\" $temp_location/top.sql > $temp_version"); // reverting quotes
 
         // Insert the data
-        if (!isset($conflict[$table])) exec("grep '^INSERT INTO' $merge_version >> $temp_version");
+        if (!in_array($table, $conflict)) exec("grep '^INSERT INTO' $merge_version >> $temp_version");
         if ($prod_version_new) exec("grep '^INSERT INTO' $prod_version_new >> $temp_version");
         if ($dev_version_new) exec("grep '^INSERT INTO' $dev_version_new >> $temp_version");
 
@@ -585,7 +585,7 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
         exec("rm $temp_location/top.sql $temp_location/bottom.sql $blank_version");
 
         // If there isn't a conflict with this table, then move it to the merge location
-        if (!isset($conflict[$table])) {
+        if (!in_array($table, $conflict)) {
           exec("mv $temp_version $merge_version");
         }
       }
@@ -595,7 +595,7 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
 
   // If there were conflicts, fail
   if ($conflict[0]) {
-    print "\nWARNING: The following tables failed to merge:\n";
+    print "\nFAILED: The following tables failed to merge:\n";
     print_r($conflict);
     return;
   }
