@@ -1123,7 +1123,6 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
 
   // For all references, raise the increment
   foreach ($table_references['references'] as $table_to_modify => $columns_referenced) {
-    $file_names = array();
 
     // Check if this table exists and has any data stored
     if (
@@ -1135,6 +1134,7 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
         ) {
 
       // Create an array of the files we'll be working with (existing data and/or new data)
+      $file_names = array();
       if (file_exists("$branch_location/data/$table_to_modify.sql")) {
         $file_names[] = $table_to_modify;
       }
