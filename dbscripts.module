@@ -1,20 +1,6 @@
 <?php
 
 /**
-  TODO
-
-  Readjust working space sequences to latest dev snapshot
-
-  Merge content as normal
-  Restore&Dump only modified/merged tables
-    check diff, and flag to be restored and dumped
-    (Double check if this is still nessisary if data files are seperate)
-
-  Have script to complete merge process after conflict (merge.php finish)
-**/
-
-
-/**
  * Get the database connection settings from settings.php file
  */
 function dbscripts_db_connect() {
@@ -1252,6 +1238,8 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
         exec("rm $temp_location/$file_name-bottom.sql");
         exec("rm $temp_location/$file_name-tmp.sql");
       }
+
+      // TODO: Raise the auto_increment value of the table
 
     }
   }
