@@ -487,7 +487,9 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
   }
 
   // Raise all the increments of the content tables of development to above production values
+  print "\nRaising increments of the '$dev_branch' branch ";
   foreach ($tables_content as $table) {
+    print "."; // gheto status messages
     // Find the last-merge value
     $lastmerge_increment = dbscripts_get_table_increment($table, $lastmerge_branch);
     $start_at = $lastmerge_increment['num'];
@@ -501,6 +503,7 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
       dbscripts_raise_table_increments($table, $start_at, $change_to, $tmpdev_branch);
     }
   }
+  print "\n"; // gheto status messages
 
   // Move all development tables and data to the temp merge location
   foreach ($tables_dev as $table) {
@@ -518,10 +521,13 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
 
   // DATA MERGING
   // Merge the data from development into the production values
+  print "\nMerging content ";
   $conflict = array();
   foreach ($tables_content as $table) {
+    print "."; // gheto status messages
     // Ensure there is actually some data to work with
     $known_data_file = file_exists("$tmpdev_location/data/$table.sql") ? "$tmpdev_location/data/$table.sql" : (file_exists("$lastmerge_location/data/$table.sql") ? "$lastmerge_location/data/$table.sql" : (file_exists("$prod_location/data/$table.sql") ? "$prod_location/data/$table.sql" : FALSE));
+    $known_data_file = $known_data_file ? $known_data_file : (file_exists("$tmpdev_location/data/$table-new.sql") ? "$tmpdev_location/data/$table-new.sql" : (file_exists("$prod_location/data/$table-new.sql") ? "$prod_location/data/$table-new.sql" : FALSE));
 
     // Set data paths
     $blank_version = "$temp_location/blank.sql";
@@ -589,14 +595,20 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
           exec("mv $temp_version $merge_version");
         }
       }
+
+      // Delete temp file
+      if (file_exists("$blank_version")) exec("rm $blank_version");
     }
 
   }
+  print "\n";
 
   // If there were conflicts, fail
   if ($conflict[0]) {
-    print "\nFAILED: The following tables failed to merge:\n";
+    print "\nDON'T PANIC! But, I'm afraid I have to inform you that the following tables\nfailed to merge:\n\n";
     print_r($conflict);
+    print "\nPlease correct the conflicts in '$merge_location' (look for '<<<<<<<').\n";
+    print "Afterwards, run '$script_path/merge.php continue' to finish the merge.\n\n";
     return;
   }
 
