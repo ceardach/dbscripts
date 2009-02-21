@@ -725,6 +725,38 @@ function dbscripts_find_tables_with_increment($branch, $filter_option = "full") 
 }
 
 
+
+/**
+ * Return a table's primary key
+ *
+ * @param $table
+ *   Table to check
+ * @param $branch
+ *   Branch to check in
+ */
+function dbscripts_get_table_primary_keys($table, $branch) {
+  require('config.inc');
+
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+
+  // Set locations
+  $branch_location = "$dump_path/$branch";
+
+  if (file_exists("$branch_location/tables/$table.sql")) {
+    $primary_key_line = exec("grep '^  PRIMARY KEY' $branch_location/tables/$table.sql | sed 's/`//g'");
+    if ($primary_key_line) {
+      $primary_key_line_parts = explode("(", $primary_key_line);
+      $primary_key_line_parts = explode(")", $primary_key_line_parts[1]);
+      $primary_keys = explode(",", $primary_key_line_parts[0]);
+      return $primary_keys;
+    }
+  }
+
+}
+
+
+
 /**
  * Find all possible references for the given table
  *
