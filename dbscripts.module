@@ -976,7 +976,7 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
  * @param $branch
  *   Branch to make the changes on.
  */
-function dbscripts_raise_increments($table, $column, $start_at, $change_to, $branch, $filter_option = 'full') {
+function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch, $filter_option = 'full') {
   require('config.inc');
   require('config.references.inc');
 
@@ -1005,25 +1005,41 @@ function dbscripts_raise_increments($table, $column, $start_at, $change_to, $bra
   // increment. Use the highest increment
   $current_inc = dbscripts_get_table_increment($table, $branch);
   if (is_array($current_inc) && $current_inc['num'] > $change_to) {
-    $change_to = $current_inc++;
+    $change_to = $current_inc;
   }
   if ($start_at > $change_to) {
     $change_to = $start_at++;
   }
 
   // Get an array of the range of increments to work with
-  $increment_range = range($start_at, ($change_to - 1));
+  $increment_range = range($start_at, ($current_inc['num'] - 1));
+
+  // Create a key=>value array of increment pairs
+  $increment_pairs = array();
+  $increment_change = $change_to;
+  foreach ($increment_range as $increment) {
+    $increment_pairs[$increment] = $increment_change;
+    $increment_change++;
+  }
+
+  // Write these increment pairs to a file for awk to use
+  exec("echo '#!/usr/bin/awk -f' > $temp_location/increment_pairs.awk");
+  exec("echo '{' >> $temp_location/increment_pairs.awk");
+  foreach ($increment_pairs as $increment => $target) {
+    exec("echo 'increment_pairs[$increment] = $target' >> $temp_location/increment_pairs.awk");
+  }
+  exec("echo '}' >> $temp_location/increment_pairs.awk");
 
   // Find all tables that use the increment
   $table_references = dbscripts_get_table_references($table, $branch, $filter_option);
+  if (!is_array($table_references)) {
+    return "\nERROR: ".$table_references."\n\n";
+  }
 
   // Fail if there are any found possible references
   if (isset($table_references['found'])) {
-    return "/nFAILED:  Possible references found/n/n".$table_references['found'];
+    return "/nFAILED:  Possible references found/n/n".$table_references['found']."\n";
   }
-
-  // add the table itself to the array to work with
-  $table_references['references'][$table][] = $column;
 
   // For all references, raise the increment
   foreach ($table_references['references'] as $table_to_modify => $columns_referenced) {
@@ -1051,6 +1067,7 @@ function dbscripts_raise_increments($table, $column, $start_at, $change_to, $bra
         exec("
             grep 'INSERT INTO' $branch_location/data/$file_name.sql \\
             |sed -e 's/^INSERT INTO `$table_to_modify` VALUES (//g' -e 's/);$//g' \\
+            |sed -e 's/#/#PND#/g' -e \"s/\\\\\'/#SQ#/g\" \\
             > $temp_location/$file_name.csv
         ");
       }
@@ -1060,57 +1077,48 @@ function dbscripts_raise_increments($table, $column, $start_at, $change_to, $bra
       $table_columns = file("$temp_location/$table_to_modify.txt", FILE_IGNORE_NEW_LINES);
       exec("rm $temp_location/$table_to_modify.txt");
 
+      // Find out the column position
+      $column_positions = array();
       foreach ($columns_referenced as $column_to_modify) {
-        // Find out the column position
-        $column_position = FALSE;
+        $found_position = FALSE;
         foreach ($table_columns as $key => $table_column) {
           if (strpos($table_column, "`$column_to_modify`")) {
-            $column_position = $key;
+            $column_positions[] = $key;
+            $found_position = TRUE;
           }
         }
-        if ($column_position === FALSE) {
+        if (!$found_position) {
           return "ERROR: Didn't find column '$column_to_modify' in '$table_to_modify' when I thought I should have.";
         }
+      }
 
-        // Raise all the increments within the given range
-        $increment_to_change = $start_at;
-        $new_increment_value = $change_to;
-        foreach ($increment_range as $increment) {
-          // Create a temporary file to hold the variables for awk
-          exec("echo '#!/usr/bin/awk -f' > $temp_location/variables.awk");
-          exec("echo '{' >> $temp_location/variables.awk");
-          exec("echo 'table = \"$table_to_modify\";' >> $temp_location/variables.awk");
-          exec("echo 'column = \"$column_position\";' >> $temp_location/variables.awk");
-          exec("echo 'increment_to_change = \"$increment_to_change\";' >> $temp_location/variables.awk");
-          exec("echo 'new_increment_value = \"$new_increment_value\";' >> $temp_location/variables.awk");
-          exec("echo '}' >> $temp_location/variables.awk");
+      // Set the column positions as a variable for awk
+      $column_variables = '';
+      foreach ($column_positions as $position) {
+        $column_variables .= "\ncolumns_to_change[$position] = $position\n";
+      }
+      exec("echo '#!/usr/bin/awk -f' > $temp_location/columns.awk");
+      exec("echo '{".$column_variables."}' >> $temp_location/columns.awk");
 
-          // Raise the increments in the csv version of the data
-          foreach ($file_names as $file_name) {
-            exec("
-                cat $temp_location/$file_name.csv | \\
-                sed \"s/\\\\\'/###@@###/g\" | \\
-                awk -f $script_path/csv.awk -f $temp_location/variables.awk -f $script_path/change_column_values.awk | \\
-                sed -e \"s/###@@###/\\\\\'/g\" -e 's/,$//g' \\
-                > $temp_location/$file_name-tmp.csv
-            ");
+      // Raise the increments in the csv version of the data
+      foreach ($file_names as $file_name) {
+        exec("
+            cat $temp_location/$file_name.csv | \\
+            awk -f $script_path/csv.awk -f $temp_location/increment_pairs.awk -f $temp_location/columns.awk -f $script_path/change_column_values.awk | \\
+            sed -e 's/,$//g' \\
+            > $temp_location/$file_name-tmp.csv
+        ");
 
-            // Check if there were any errors
-            if (exec("grep '^ERROR' $temp_location/$file_name-tmp.csv")) {
-              return "ERROR: There was an error parsing the data in '$table_to_modify' as CSV.  Check the file '$temp_location/$file_name-tmp.csv'";
-            } else {
-              exec("mv $temp_location/$file_name-tmp.csv $temp_location/$file_name.csv");
-            }
-          }
-
-          // Raise increments for next pass
-          $increment_to_change++;
-          $new_increment_value++;
-
-          // Delete temp file
-          exec("rm $temp_location/variables.awk");
+        // Check if there were any errors
+        if (exec("grep '^ERROR' $temp_location/$file_name-tmp.csv")) {
+          return "ERROR: There was an error parsing the data in '$table_to_modify' as CSV.  Check the file '$temp_location/$file_name-tmp.csv'";
+        } else {
+          exec("mv $temp_location/$file_name-tmp.csv $temp_location/$file_name.csv");
         }
       }
+
+      // Delete variable temp file
+      exec("rm $temp_location/columns.awk");
 
       // Convert the csv file back to SQL
       foreach ($file_names as $file_name) {
@@ -1123,7 +1131,7 @@ function dbscripts_raise_increments($table, $column, $start_at, $change_to, $bra
             if (preg_match("/^INSERT INTO/", $line)){
               $data_start = $key;
             } else{
-              $line = str_replace("'", "###@@###", $line); // issues with quotes
+              $line = str_replace("'", "#SQ#", $line); // issues with quotes
               if ($key == 0) {
                 exec("echo '$line' > $temp_location/$file_name.sql");
               } else {
@@ -1133,23 +1141,36 @@ function dbscripts_raise_increments($table, $column, $start_at, $change_to, $bra
           }
         }
 
-        // Apply the new data after the top sql comments, converting the csv to sql along the way
-        exec("sed -e 's/^/INSERT INTO `$table_to_modify` VALUES (/g' -e 's/$/);/g' $temp_location/$file_name.csv >> $temp_location/$file_name.sql");
+        // Reapply quotes to the top comments
+        exec("sed \"s/#SQ#/'/g\" $temp_location/$file_name.sql > $temp_location/$file_name-tmp.sql");
+        exec("mv $temp_location/$file_name-tmp.sql $temp_location/$file_name.sql");
 
-        // Apply the bottom comments after the new data
+        // Apply the new data after the top sql comments, converting the csv to sql along the way
+        exec("
+          sed -e 's/^/INSERT INTO `$table_to_modify` VALUES (/g' -e 's/$/);/g' \\
+          -e \"s/#SQ#/\\\\\'/g\" -e 's/#PND#/#/g' \\
+          $temp_location/$file_name.csv >> $temp_location/$file_name.sql
+        ");
+
+        // Create a file of the bottom comments
         foreach ($sql as $key => $line) {
-          if ($key > $data_start && !strpos($line, "INSERT INTO `$table_to_modify` VALUES")) {
-            $line = str_replace("'", "###@@###", $line); // issues with quotes
-            exec("echo '$line' >> $temp_location/$file_name.sql");
+          if ($key > $data_start && !preg_match("/^INSERT INTO/", $line)) {
+            $line = str_replace("'", "#SQ#", $line); // issues with quotes
+            exec("echo '$line' >> $temp_location/$file_name-bottom.sql");
           }
         }
 
-        // Reapply quotes
-        exec("sed \"s/###@@###/'/g\" $temp_location/$file_name.sql > $temp_location/$file_name-tmp.sql");
-        exec("mv $temp_location/$file_name-tmp.sql $temp_location/$file_name.sql");
+        // Reapply quotes to the bottom comments
+        // (seperating sed statements to avoid running another sed query through the entire data)
+        exec("sed \"s/#SQ#/'/g\" $temp_location/$file_name-bottom.sql > $temp_location/$file_name-tmp.sql");
 
-        // Delete the temporary csv file
+        // Attach the bottom comments to the end of the sql file
+        exec("cat $temp_location/$file_name-tmp.sql >> $temp_location/$file_name.sql");
+
+        // Delete the temporary files
         exec("rm $temp_location/$file_name.csv");
+        exec("rm $temp_location/$file_name-bottom.sql");
+        exec("rm $temp_location/$file_name-tmp.sql");
       }
 
     }
