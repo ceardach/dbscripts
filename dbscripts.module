@@ -1355,18 +1355,15 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
   // Ensure tmp directory exists
   if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
 
-  // Find the largest increment value between $start_at, $change_to and the current
+  // Find the largest increment value between $change_to and the current
   // increment. Use the highest increment
   $current_inc = dbscripts_get_table_increment($table, $branch);
   if (is_array($current_inc) && $current_inc['num'] > $change_to) {
     $change_to = $current_inc['num'];
   }
-  if ($start_at > $change_to) {
-    $change_to = $start_at++;
-  }
 
   // Get an array of the range of increments to work with
-  if ($start_at < ($current_inc['num'] - 1)) {
+  if ($start_at < $current_inc['num']) {
     $increment_range = range($start_at, ($current_inc['num'] - 1));
   } else {
     // There is nothing to do then.  Likely there are no new records.
