@@ -1413,8 +1413,10 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
   }
 
   // Fail if there are any found possible references
-  if (isset($table_references['found'])) {
-    return "/nFAILED:  Possible references found/n/n".$table_references['found']."\n";
+  if (array_key_exists('found', $table_references)) {
+    print "\nFAILED:  Possible references found\n\n";
+    print_r($table_references['found']);
+    return;
   }
 
   // Add system path patterns as references
