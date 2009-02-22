@@ -431,7 +431,7 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
  *   Location of the database file that is used as 'production'.  Only content
  *   and user data will be perserved.  All other data will be lost.
  */
-function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-merge', $prod_branch = 'production') {
+function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-merge', $prod_branch = 'production', $continue = FALSE) {
   require('config.inc');
 
   // Ensure required files are loaded
@@ -450,6 +450,7 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
   $merge_location = "$temp_location/merge";
   $tmpdev_branch = "tmp/dev";
   $tmpdev_location = "$dump_path/$tmpdev_branch";
+  $conflict_file = "$temp_location/conflict.txt";
 
   // Ensure all the branches exist
   $missing_branch = '';
@@ -465,7 +466,84 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
   // Ensure tmp folder exists
   if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
 
-  // After a conflict, the temp files would still exist, so delete them
+  // CONTINUE MERGE
+  // If a previous merge had a conflict, it'll be picked up and continued here
+  if ($continue) {
+
+    if (file_exists($conflict_file)) {
+      $conflicted_tables = file($conflict_file, FILE_IGNORE_NEW_LINES);
+
+      foreach ($conflicted_tables as $table) {
+        // Set the location of the merge files for existing and new data
+        $existing_version = "$merge_location/data/$table.sql";
+        $new_version = "$temp_location/$table.sql";
+        $temp_version = "$temp_location/$table-tmp.sql";
+
+        // Ensure the file exists
+        if (!file_exists($existing_version)) {
+          return "\nI thought you resolved conflicts in '$table', but the file is missing.\nAre you trying to confuse me??\n\n";
+        }
+
+        // Ensure that the merge was actually resolved
+        $check_conflict = exec("grep '^<<<<<<<' $existing_version");
+        if ($check_conflict) {
+           return "\n'$table' still has conflicts, please resolve them first.\n\n";
+        }
+
+        // If there was any new data to this table, we'll have to merge the two
+        if (file_exists($new_version)) {
+          $sql = file("$existing_version", FILE_IGNORE_NEW_LINES);
+
+          // Get the top sql comments
+          $data_start = '';
+          foreach ($sql as $key => $line) {
+            if (!$data_start) {
+              if (preg_match("/^INSERT INTO/", $line)) {
+                $data_start = $key;
+              } else {
+                $line = str_replace("'", "#SQ#", $line); // issues with quotes
+                if ($key == 0) {
+                  exec("echo '$line' > $temp_location/top.sql");
+                } else {
+                  exec("echo '$line' >> $temp_location/top.sql");
+                }
+              }
+            }
+          }
+          exec("sed \"s/#SQ#/\\'/g\" $temp_location/top.sql > $temp_version"); // reverting quotes
+
+          // Insert the data
+          exec("grep '^INSERT INTO' $existing_version >> $temp_version");
+          exec("grep '^INSERT INTO' $new_version >> $temp_version");
+
+          // Insert the bottom sql comments
+          foreach ($sql as $key => $line) {
+            if ($key > $data_start && !preg_match("/^INSERT INTO/", $line)) {
+              $line = str_replace("'", "#SQ#", $line); // issues with quotes
+              exec("echo '$line' >> $temp_location/bottom.sql");
+            }
+          }
+          exec("sed \"s/#SQ#/\\'/g\" $temp_location/bottom.sql >> $temp_version"); // reverting quotes
+
+          // Copy the results over to where we're storing data
+          exec("mv $temp_version $existing_version");
+
+          // Delete files that are no longer required
+          exec("rm $temp_location/top.sql $temp_location/bottom.sql $new_version");
+        }
+
+      }
+
+      // Delete the conflict file
+      exec("rm $conflict_file");
+
+    } else {
+      return "\nI cannot find '$conflict_file', so I cannot continue :(\n\n";
+    }
+
+  } else {
+
+  // After a conflict, the temp files would still exist, so delete everything and start over
   if (exec("ls $temp_location")) exec("rm -r $temp_location/*");
 
   // Creating merge folders
@@ -523,6 +601,7 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
   // Merge the data from development into the production values
   print "\nMerging content ";
   $conflict = array();
+  exec("echo '' > $conflict_file");
   foreach ($tables_content as $table) {
     print "."; // gheto status messages
     // Ensure there is actually some data to work with
@@ -549,6 +628,7 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
       $check_conflict = exec("grep '^<<<<<<<' $merge_version");
       if ($check_conflict) {
          $conflict[] = $table;
+         exec("echo '$table' > $conflict_file");
       }
 
       // Merge the new data
@@ -612,7 +692,10 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
     return;
   }
 
+  } // end else of !$continue
+
   // MERGE COMPLETE
+
   // Copy this new merged version to all three branches
   exec("rm -r $dev_location $lastmerge_location $prod_location");
   exec("cp $tmpdev_location/table_list.txt $merge_location");
@@ -634,6 +717,7 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
 
   return "\n$message\n\n";
 }
+
 
 
 /**
