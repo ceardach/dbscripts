@@ -1459,7 +1459,7 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
         exec("
             grep 'INSERT INTO' $branch_location/data/$file_name.sql \\
             |sed -e 's/^INSERT INTO `$table_to_modify` VALUES (//g' -e 's/);$//g' \\
-            |sed -e 's/#/#PND#/g' -e \"s/\\\\\'/#SQ#/g\" \\
+            |sed -e 's/#/#PND#/g' -e \"s/\\\\\'/#SQ#/g\" -e 's/\"/#DQ#/g' \\
             > $temp_location/$file_name.csv
         ");
       }
@@ -1540,7 +1540,7 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
         // Apply the new data after the top sql comments, converting the csv to sql along the way
         exec("
           sed -e 's/^/INSERT INTO `$table_to_modify` VALUES (/g' -e 's/$/);/g' \\
-          -e \"s/#SQ#/\\\\\'/g\" -e 's/#PND#/#/g' \\
+          -e 's/#DQ#/\"/g' -e \"s/#SQ#/\\\\\'/g\" -e 's/#PND#/#/g' \\
           $temp_location/$file_name.csv >> $temp_location/$file_name.sql
         ");
 
