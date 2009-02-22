@@ -290,7 +290,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
         grep 'INSERT INTO' $dumped_version \\
         |sed -e 's/^INSERT INTO `users` VALUES (//g' -e 's/);$//g' \\
         |sed -e 's/#/#PND#/g' -e \"s/\\\\\'/#SQ#/g\" -e \"s/\\\\\\\"/#DQ#/g\" \\
-        | awk -f $script_path/csv.awk -f $script_path/convert.awk \\
+        | awk -f $script_path/helpers/csv.awk -f $script_path/helpers/convert.awk \\
         |sed -e 's/#CM#$//g' \\
         > $dumped_converted_version
     ");
@@ -298,7 +298,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
         grep 'INSERT INTO' $lastmerge_version \\
         |sed -e 's/^INSERT INTO `users` VALUES (//g' -e 's/);$//g' \\
         |sed -e 's/#/#PND#/g' -e \"s/\\\\\'/#SQ#/g\" -e \"s/\\\\\\\"/#DQ#/g\" \\
-        | awk -f $script_path/csv.awk -f $script_path/convert.awk \\
+        | awk -f $script_path/helpers/csv.awk -f $script_path/helpers/convert.awk \\
         |sed -e 's/#CM#$//g' \\
         > $lastmerge_converted_version
     ");
@@ -1495,7 +1495,7 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
       foreach ($file_names as $file_name) {
         exec("
             cat $temp_location/$file_name.csv | \\
-            awk -f $script_path/csv.awk -f $temp_location/increment_pairs.awk -f $temp_location/columns.awk -f $script_path/change_column_values.awk | \\
+            awk -f $script_path/helpers/csv.awk -f $temp_location/increment_pairs.awk -f $temp_location/columns.awk -f $script_path/helpers/change_column_values.awk | \\
             sed -e 's/,$//g' \\
             > $temp_location/$file_name-tmp.csv
         ");
