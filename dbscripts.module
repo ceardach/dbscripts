@@ -182,7 +182,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
     $increment_lastmerge = dbscripts_get_table_increment($table, 'last-merge');
 
     $new_data = FALSE;
-    if ($increment_current && is_array($increment_current) && $increment_lastmerge && is_array($increment_lastmerge)) {
+    if ($branch != "last-merge" && $increment_current && is_array($increment_current) && $increment_lastmerge && is_array($increment_lastmerge)) {
       if ($increment_current['num'] > $increment_lastmerge['num']) {
       	$new_data = TRUE;
       } elseif ($increment_current['num'] < $increment_lastmerge['num']) {
@@ -1005,14 +1005,19 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
   // increment. Use the highest increment
   $current_inc = dbscripts_get_table_increment($table, $branch);
   if (is_array($current_inc) && $current_inc['num'] > $change_to) {
-    $change_to = $current_inc;
+    $change_to = $current_inc['num'];
   }
   if ($start_at > $change_to) {
     $change_to = $start_at++;
   }
 
   // Get an array of the range of increments to work with
-  $increment_range = range($start_at, ($current_inc['num'] - 1));
+  if ($start_at < ($current_inc['num'] - 1)) {
+    $increment_range = range($start_at, ($current_inc['num'] - 1));
+  } else {
+    // There is nothing to do then.  Likely there are no new records.
+    return;
+  }
 
   // Create a key=>value array of increment pairs
   $increment_pairs = array();
@@ -1022,11 +1027,31 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
     $increment_change++;
   }
 
-  // Write these increment pairs to a file for awk to use
+  // If there is a system paths reference, also add the pairs
+  $pattern_pair_old = array();
+  $pattern_pair_new = array();
+  if (isset($system_paths[$table])) {
+    $i = 0;
+    foreach ($system_paths[$table]['patterns'] as $key => $pattern) {
+      foreach ($increment_pairs as $old_increment => $new_increment) {
+        $pattern_pair_old[$i] = str_replace('*', $old_increment, $pattern);
+        $pattern_pair_new[$i] = str_replace('*', $new_increment, $pattern);
+        $i++;
+      }
+    }
+  }
+
+  // Write these increment and pattern pairs to a file for awk to use
   exec("echo '#!/usr/bin/awk -f' > $temp_location/increment_pairs.awk");
   exec("echo '{' >> $temp_location/increment_pairs.awk");
   foreach ($increment_pairs as $increment => $target) {
     exec("echo 'increment_pairs[$increment] = $target' >> $temp_location/increment_pairs.awk");
+  }
+  foreach ($pattern_pair_old as $key => $pattern) {
+    exec("echo \"pattern_pair_old[$key] = \\\"'$pattern'\\\"\" >> $temp_location/increment_pairs.awk");
+  }
+  foreach ($pattern_pair_new as $key => $pattern) {
+    exec("echo \"pattern_pair_new[$key] = \\\"'$pattern'\\\"\" >> $temp_location/increment_pairs.awk");
   }
   exec("echo '}' >> $temp_location/increment_pairs.awk");
 
@@ -1039,6 +1064,15 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
   // Fail if there are any found possible references
   if (isset($table_references['found'])) {
     return "/nFAILED:  Possible references found/n/n".$table_references['found']."\n";
+  }
+
+  // Add system path patterns as references
+  if (isset($system_paths[$table]['tables'])) {
+    foreach ($system_paths[$table]['tables'] as $system_path_table => $system_path_columns) {
+      foreach ($system_path_columns as $system_path_column) {
+        $table_references['references'][$system_path_table][] = $system_path_column;
+      }
+    }
   }
 
   // For all references, raise the increment
@@ -1176,6 +1210,9 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
     }
   }
 
+  // Delete temporary files
+  exec("rm $temp_location/increment_pairs.awk");
+
   // Since we got this far without error, we can now move
   // all the newly created sql files from temp back to the branch
   foreach ($table_references['references'] as $table_to_modify => $columns_referenced) {
@@ -1188,6 +1225,79 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
   }
 
 }
+
+
+
+/**
+ * Raise all increments of a given branch based on the values of the last-merge and
+ * production branches
+ *
+ * @param $dev_branch
+ *   Location of the branch you wish to make the changes on.  All actions will effect
+ *   and modify this branch.
+ * @param $lastmerge_branch
+ *   Location of the branch that was used to represent the state the
+ *   last time the other two branches were merged.  This is used as reference
+ *   to discover the start of increment rewriting.
+ * @param $prod_branch
+ *   Location of the branch that will be used as reference to discover at which point
+ *   the rewrite should start at.
+ */
+function dbscripts_raise_all_increments($dev_branch = 'development', $lastmerge_branch = 'last-merge', $prod_branch = 'production') {
+  require('config.inc');
+
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+
+  // If empty data gets sent through, reset it to defaults
+  if (!$dev_branch) $dev_branch = 'development';
+  if (!$lastmerge_branch) $lastmerge_branch = 'last-merge';
+  if (!$prod_branch) $prod_branch = 'production';
+
+  // Set all locations
+  $temp_location = "$dump_path/tmp";
+  $dev_location = "$dump_path/$dev_branch";
+  $lastmerge_location = "$dump_path/$lastmerge_branch";
+  $prod_location = "$dump_path/$prod_branch";
+
+  // Ensure all the branches exist
+  $missing_branch = '';
+  if (!file_exists($dev_location)) $missing_branch .= $dev_branch.' ';
+  if (!file_exists($lastmerge_location)) $missing_branch .= $lastmerge_branch.' ';
+  if (!file_exists($prod_location)) $missing_branch .= $prod_branch.' ';
+
+  // Cancel merge if all branches do not exist
+  if ($missing_branch) {
+    return "\nMissing database files for merge: $missing_branch\n\n";
+  }
+
+  // Ensure tmp folder exists
+  if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
+
+  // Define the tables, fail if they don't return arrays
+  if (file_exists("$dev_location/table_list.txt")) {
+    $tables = file("$dev_location/table_list.txt", FILE_IGNORE_NEW_LINES);
+  } else {
+    return "\nFAILED: Cannot find $dev_location/table_list.txt";
+  }
+
+  foreach ($tables as $table) {
+    // Find the last-merge value
+    $lastmerge_increment = dbscripts_get_table_increment($table, $lastmerge_branch);
+    $start_at = $lastmerge_increment['num'];
+
+    // Find the production value
+    $production_increment = dbscripts_get_table_increment($table, $prod_branch);
+    $change_to = $production_increment['num'];
+
+    if ($start_at < $change_to) {
+      // Raise the increments
+      dbscripts_raise_table_increments($table, $start_at, $change_to, $dev_branch);
+    }
+  }
+
+}
+
 
 
 /**

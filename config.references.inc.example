@@ -21,6 +21,8 @@ $tables_standalone = array(
   'blogapi_files', // this should not have auto_increment on fid, since it is files.fid (or at least should be)
 );
 
+
+
 // Tables that are referenced by other tables
 // Error checking will be performed against this array to ensure no additional
 //    possibilies were added
@@ -157,6 +159,7 @@ $tables_referenced = array(
     'false positives' => array (
       'content_field_.*' => array('field_*_fid', 'field_*_list', 'field_*_data'),
       'content_type_.*' => array('field_*_fid', 'field_*_list', 'field_*_data'),
+      'node' => array('tnid'),
     ),
   ),
 
@@ -280,4 +283,35 @@ $tables_referenced = array(
     ),
   ),
 
+);
+
+
+
+// System paths that have to be updated
+// The wildcard '*' symbolizes that table's primary key
+//
+// You will have to manually edit this for every custom view
+$system_paths = array(
+  'node' => array(
+    'patterns' => array('node/*', 'node/*/edit', 'node/*/feed'),
+    'tables' => array(
+      'menu_links' => array('link_path', 'router_path'),
+      'menu_router' => array('path', 'tab_parent', 'tab_root'),
+      'url_alias' => array('src'),
+    ),
+  ),
+
+  'term_data' => array(
+    'patterns' => array('taxonomy/term/*', 'taxonomy/term/*/feed'),
+    'tables' => array(
+      'url_alias' => array('src'),
+    ),
+  ),
+
+  'users' => array(
+    'patterns' => array('user/*'),
+    'tables' => array(
+      'url_alias' => array('src'),
+    ),
+  ),
 );
