@@ -710,10 +710,15 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
   exec("cp -R $merge_location $prod_location");
 
   // Dev and last-merge do not need to be bothered with all the data
-  $all_filtered_tables = array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2);
-  foreach ($all_filtered_tables as $table) {
+  $tables_cleared = dbscripts_process_tables($tmpdev_branch, array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2), FALSE);
+  foreach ($tables_cleared as $table) {
+    // Erase the data file
   	if (file_exists("$dev_location/data/$table.sql")) exec("rm $dev_location/data/$table.sql");
     if (file_exists("$lastmerge_location/data/$table.sql")) exec("rm $lastmerge_location/data/$table.sql");
+
+    // Copy over the dev version of the table
+    exec("cp $tmpdev_location/tables/$table.sql $dev_location/tables/$table.sql");
+    exec("cp $tmpdev_location/tables/$table.sql $lastmerge_location/tables/$table.sql");
   }
 
   // Clear temp
