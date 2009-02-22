@@ -123,6 +123,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
 
   // Set the filtering options and message to be presented to the user
   $tables_cleared = array();
+  $fix_user_table = FALSE;
   switch($filter_option){
     case 'none':
       $message = "Performed a full database dump to $branch.";
@@ -135,6 +136,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
 
     default:
       $tables_cleared = array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2);
+      $fix_user_table = TRUE;
       $message = "Dumped the database to $branch with full filtering options.";
       break;
   }
@@ -266,6 +268,121 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
   // Move the data files to the working space's last dump
   if (exec("ls $workspace_location/data")) exec("rm $workspace_location/data/*");
   exec("mv $temp_location/* $workspace_location/data");
+
+  // Fix the users table issue with conflicting timestamps
+  // Just use the last-merge timestamp
+  if ($fix_user_table) {
+    // Define paths
+    $dumped_version = "$workspace_location/data/users.sql";
+    $lastmerge_version = "$lastmerge_location/data/users.sql";
+    $dumped_converted_version = "$temp_location/users.txt";
+    $lastmerge_converted_version = "$temp_location/users.txt";
+    $rewritten_version = "$temp_location/users.csv";
+    $new_version = "$temp_location/users.sql";
+
+    // Columns to work with (minus 1 for arrays)
+    $uid_column = 1;
+    $access_column = 10;
+    $login_column = 11;
+
+    // Create a converted version of the user table
+    exec("
+        grep 'INSERT INTO' $dumped_version \\
+        |sed -e 's/^INSERT INTO `users` VALUES (//g' -e 's/);$//g' \\
+        |sed -e 's/#/#PND#/g' -e \"s/\\\\\'/#SQ#/g\" -e \"s/\\\\\\\"/#DQ#/g\" \\
+        | awk -f $script_path/csv.awk -f $script_path/convert.awk \\
+        |sed -e 's/#CM#$//g' \\
+        > $dumped_converted_version
+    ");
+    exec("
+        grep 'INSERT INTO' $lastmerge_version \\
+        |sed -e 's/^INSERT INTO `users` VALUES (//g' -e 's/);$//g' \\
+        |sed -e 's/#/#PND#/g' -e \"s/\\\\\'/#SQ#/g\" -e \"s/\\\\\\\"/#DQ#/g\" \\
+        | awk -f $script_path/csv.awk -f $script_path/convert.awk \\
+        |sed -e 's/#CM#$//g' \\
+        > $lastmerge_converted_version
+    ");
+
+    // Convert to arrays
+    $dumped_converted_file = file("$dumped_converted_version", FILE_IGNORE_NEW_LINES);
+    $lastmerge_converted_file = file("$lastmerge_converted_version", FILE_IGNORE_NEW_LINES);
+
+    // Put the UID as the array key, with an array of columns
+    foreach ($dumped_converted_file as $line) {
+      $line_parts = explode('#CM#', $line);
+      $dumped_converted[$line_parts[0]] = $line_parts;
+    }
+    foreach ($lastmerge_converted_file as $line) {
+      $line_parts = explode('#CM#', $line);
+      $lastmerge_converted[$line_parts[0]] = $line_parts;
+    }
+
+    // Rewrite the timestamps
+    foreach ($dumped_converted as $uid => $columns) {
+      $rewritten_timestamps[$uid] = $columns;
+      if (isset($lastmerge_converted[$uid])) {
+        $rewritten_timestamps[$uid][$access_column] = $lastmerge_converted[$uid][$access_column];
+        $rewritten_timestamps[$uid][$login_column] = $lastmerge_converted[$uid][$login_column];
+      }
+    }
+
+    // Write the rewritten version to file
+    foreach ($rewritten_timestamps as $columns) {
+      $line = '';
+      foreach ($columns as $key => $column) {
+        if ($key == 0) {
+          $line = $column;
+        } else {
+          $line .= ",$column";
+        }
+      }
+      exec("echo \"$line\" >> $rewritten_version");
+    }
+
+    // Convert the file to SQL
+    $sql = file("$lastmerge_version", FILE_IGNORE_NEW_LINES);
+
+    // Get the top sql comments
+    $data_start = '';
+    foreach ($sql as $key => $line) {
+      if (!$data_start) {
+        if (preg_match("/^INSERT INTO/", $line)) {
+          $data_start = $key;
+        } else {
+          $line = str_replace("'", "#SQ#", $line); // issues with quotes
+          if ($key == 0) {
+            exec("echo '$line' > $temp_location/top.sql");
+          } else {
+            exec("echo '$line' >> $temp_location/top.sql");
+          }
+        }
+      }
+    }
+    exec("sed \"s/#SQ#/\\'/g\" $temp_location/top.sql > $new_version"); // reverting quotes
+
+    // Insert the data
+    exec("
+        cat $rewritten_version \\
+        |sed -e \"s/#DQ#/\\\\\\\"/g\" -e \"s/#SQ#/\\\\\'/g\" -e 's/#PND#/#/g' \\
+        |sed -e 's/^/INSERT INTO `users` VALUES (/g' -e 's/$/);/g' \\
+        >> $new_version
+    ");
+
+    // Insert the bottom sql comments
+    foreach ($sql as $key => $line) {
+      if ($key > $data_start && !preg_match("/^INSERT INTO/", $line)) {
+        $line = str_replace("'", "#SQ#", $line); // issues with quotes
+        exec("echo '$line' >> $temp_location/bottom.sql");
+      }
+    }
+    exec("sed \"s/#SQ#/\\'/g\" $temp_location/bottom.sql >> $new_version"); // reverting quotes
+
+    // Copy the results over to the new dump
+    exec("mv $new_version $dumped_version");
+
+    // Delete files that are no longer required
+    exec("rm $temp_location/top.sql $temp_location/bottom.sql $lastmerge_converted_version $rewritten_version");
+  }
 
   // For now we're just going to directly copy everything to $dump_location
   // Eventually we'll actually perform a merge
