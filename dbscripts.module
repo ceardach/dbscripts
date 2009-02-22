@@ -807,7 +807,7 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
   print "\n";
 
   // If there were conflicts, fail
-  if ($conflict[0]) {
+  if (isset($conflict[0])) {
     print "\nDON'T PANIC! But, I'm afraid I have to inform you that the following tables\nfailed to merge:\n\n";
     print_r($conflict);
     print "\nPlease correct the conflicts in '$merge_location' (look for '<<<<<<<').\n";
@@ -1355,18 +1355,15 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
   // Ensure tmp directory exists
   if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
 
-  // Find the largest increment value between $start_at, $change_to and the current
+  // Find the largest increment value between $change_to and the current
   // increment. Use the highest increment
   $current_inc = dbscripts_get_table_increment($table, $branch);
   if (is_array($current_inc) && $current_inc['num'] > $change_to) {
     $change_to = $current_inc['num'];
   }
-  if ($start_at > $change_to) {
-    $change_to = $start_at++;
-  }
 
   // Get an array of the range of increments to work with
-  if ($start_at < ($current_inc['num'] - 1)) {
+  if ($start_at < $current_inc['num']) {
     $increment_range = range($start_at, ($current_inc['num'] - 1));
   } else {
     // There is nothing to do then.  Likely there are no new records.
@@ -1416,8 +1413,10 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
   }
 
   // Fail if there are any found possible references
-  if (isset($table_references['found'])) {
-    return "/nFAILED:  Possible references found/n/n".$table_references['found']."\n";
+  if (array_key_exists('found', $table_references)) {
+    print "\nFAILED:  Possible references found\n\n";
+    print_r($table_references['found']);
+    return;
   }
 
   // Add system path patterns as references
@@ -1459,7 +1458,7 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
         exec("
             grep 'INSERT INTO' $branch_location/data/$file_name.sql \\
             |sed -e 's/^INSERT INTO `$table_to_modify` VALUES (//g' -e 's/);$//g' \\
-            |sed -e 's/#/#PND#/g' -e \"s/\\\\\'/#SQ#/g\" \\
+            |sed -e 's/#/#PND#/g' -e \"s/\\\\\'/#SQ#/g\" -e 's/\"/#DQ#/g' \\
             > $temp_location/$file_name.csv
         ");
       }
@@ -1540,7 +1539,7 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
         // Apply the new data after the top sql comments, converting the csv to sql along the way
         exec("
           sed -e 's/^/INSERT INTO `$table_to_modify` VALUES (/g' -e 's/$/);/g' \\
-          -e \"s/#SQ#/\\\\\'/g\" -e 's/#PND#/#/g' \\
+          -e 's/#DQ#/\"/g' -e \"s/#SQ#/\\\\\'/g\" -e 's/#PND#/#/g' \\
           $temp_location/$file_name.csv >> $temp_location/$file_name.sql
         ");
 
