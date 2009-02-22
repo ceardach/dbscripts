@@ -42,7 +42,7 @@
 
     // Find all configured and possible references to a given table
     } elseif (isset($options[1]) && $options[1] == 'references') {
-      if(isset($options[2]) && $options[2] != 'found') {
+      if(isset($options[2]) && $options[2] != 'all' && $options[2] != 'found') {
         $table =  $options[2];
         $branch = isset($options[3]) && $options[3] != 'found' ? $options[3] : 'development';
         $filter_option = isset($options[4]) && $options[4] != 'found' ? $options[4] : 'full';
