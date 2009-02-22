@@ -393,6 +393,33 @@ function dbscripts_process_tables($branch, $tables_compare, $remove_match = TRUE
 
 
 /**
+ * Get a given table's current auto increment value
+ */
+function dbscripts_table_increment($table, $branch) {
+  require('config.inc');
+
+  $branch_location = "$dump_path/$branch";
+
+  $increment = FALSE;
+  if (exec("grep 'AUTO_INCREMENT=' $branch_location/tables/$table.sql")) {
+    $inc_string = exec("grep 'AUTO_INCREMENT=' $branch_location/tables/$table.sql");
+    $inc_string_parts = explode(' ', $inc_string);
+    foreach ($inc_string_parts as $part) {
+      if (strpos($part, 'AUTO_INCREMENT=') !== FALSE) {
+        $increment['num'] = str_replace('AUTO_INCREMENT=', '', $part);
+      }
+    }
+
+    $id_string = exec("grep auto_increment $branch_location/tables/$table.sql");
+    $id_string_parts = explode('`', $id_string);
+    $increment['id'] = $id_string_parts[1];
+  }
+
+  return $increment;
+}
+
+
+/**
  * Dump the database
  *
  * @param $branch
@@ -422,16 +449,14 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
 
   $dump_location = "$dump_path/$branch";
   $temp_location = "$dump_path/tmp";
+  $workspace_location = "$dump_path/workspace/last-dump";
 
   // Creating required folders
   if (!file_exists($temp_location)) {exec("mkdir -p $temp_location");}
-  if (!file_exists($dump_location)) {exec("mkdir -p $dump_location");}
   if (!file_exists("$dump_location/data")) {exec("mkdir -p $dump_location/data");}
   if (!file_exists("$dump_location/tables")) {exec("mkdir -p $dump_location/tables");}
-
-  // Create an array of all tables in the database and store it
-  exec("$mysqldump --add-drop-table --no-data $db_connection_settings | grep 'DROP TABLE' | sed -e \"s/DROP TABLE IF EXISTS .//g\" -e \"s/.;//g\" > $dump_location/table_list.txt");
-  $table_list = file("$dump_location/table_list.txt", FILE_IGNORE_NEW_LINES);
+  if (!file_exists("$workspace_location/tables")) {exec("mkdir -p $workspace_location/tables");}
+  if (!file_exists("$workspace_location/data")) {exec("mkdir -p $workspace_location/data");}
 
   // Set the filtering options and message to be presented to the user
   $tables_cleared = array();
@@ -452,12 +477,16 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
       break;
   }
 
+  // Create an array of all tables in the database and store it
+  exec("$mysqldump --add-drop-table --no-data $db_connection_settings | grep 'DROP TABLE' | sed -e \"s/DROP TABLE IF EXISTS .//g\" -e \"s/.;//g\" > $workspace_location/table_list.txt");
+  $table_list = file("$workspace_location/table_list.txt", FILE_IGNORE_NEW_LINES);
+
   // These are all the special dump options that make the database diffable
   // and preserve character set
   $dump_options = "--skip-opt --add-drop-table --add-locks --create-options --quick --lock-tables --set-charset --disable-keys --order-by-primary --skip-comments --comments=FALSE --default-character-set=utf8 --character-sets-dir=$charsets --hex-blob";
 
   // Dump the structure of all tables
-  if (exec("ls $temp_location")) exec("rm $temp_location/*");
+  if (exec("ls $temp_location")) exec("rm -r $temp_location/*");
   foreach ($table_list as $table) {
   	exec("$mysqldump $dump_options --no-data $db_connection_settings --tables $table > $temp_location/$table.sql");
   }
@@ -468,23 +497,46 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
     return "\nEmpty data returned.  There may be a problem connecting to the database.\n\n";
   }
 
-  // Move the table files from the temp directory
-  if (exec("ls $dump_location/tables")) exec("rm $dump_location/tables/*");
-  exec("mv $temp_location/* $dump_location/tables");
+  // Move the table files to the working space's last dump
+  if (exec("ls $workspace_location/tables")) exec("rm $workspace_location/tables/*");
+  exec("mv $temp_location/* $workspace_location/tables");
 
   // Dump the data of all tables we're tracking
-  $tables_dumped = dbscripts_process_tables($branch, $tables_cleared);
+  $tables_dumped = dbscripts_process_tables("workspace/last-dump", $tables_cleared);
   foreach ($tables_dumped as $table) {
-    exec("$mysqldump $dump_options --no-create-info $db_connection_settings --tables $table > $temp_location/$table.sql");
+    // get the table's increment both currently, and last-merge and compare
+    $increment_current = dbscripts_table_increment($table, 'workspace/last-dump');
+    $increment_lastmerge = dbscripts_table_increment($table, 'last-merge');
+
+    $new_data = FALSE;
+    if ($increment_current['num'] > $increment_lastmerge['num']) {
+    	$new_data = TRUE;
+    } elseif ($increment_current['num'] < $increment_lastmerge['num']) {
+    	$message .= "\n\nWARNING: Current AUTO_INCREMENT of table $table is lower than last-merge\n\n";
+    }
+
+    if ($new_data) {
+      exec("$mysqldump $dump_options --no-create-info $db_connection_settings --where='{$increment_lastmerge['id']}<{$increment_lastmerge['num']}' --tables $table > $temp_location/$table.sql");
+      exec("$mysqldump $dump_options --no-create-info $db_connection_settings --where='{$increment_lastmerge['id']}>={$increment_lastmerge['num']}' --tables $table > $temp_location/$table-new.sql");
+    } else {
+      exec("$mysqldump $dump_options --no-create-info $db_connection_settings --tables $table > $temp_location/$table.sql");
+    }
 
     // If there's no data, then delete the file
-    $data = exec("grep 'INSERT INTO' $temp_location/$table.sql");
-    if (!$data) {exec("rm $temp_location/$table.sql");}
+    if (!exec("grep 'INSERT INTO' $temp_location/$table.sql")) {exec("rm $temp_location/$table.sql");}
+    if (file_exists("$temp_location/$table-new.sql")) {
+      if (!exec("grep 'INSERT INTO' $temp_location/$table-new.sql")) exec("rm $temp_location/$table-new.sql");
+    }
   }
 
-  // Move the data files from the temp directory
-  if (exec("ls $dump_location/data")) exec("rm $dump_location/data/*");
-  exec("mv $temp_location/* $dump_location/data");
+  // Move the data files to the working space's last dump
+  if (exec("ls $workspace_location/data")) exec("rm $workspace_location/data/*");
+  exec("mv $temp_location/* $workspace_location/data");
+
+  // For now we're just going to directly copy everything to $dump_location
+  exec("rm -r $dump_location/*");
+  exec("cp -R $workspace_location/* $dump_location");
+
 
   // Let the user know what happened
   return "\n$message\n\n";
@@ -577,13 +629,13 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
     return "\nImproper database connection settings.\n\n";
   }
 
-  // Set the location to restore from
+  // Set locations
   $dump_location = "$dump_path/$branch";
+  $workspace_location = "$dump_path/workspace/last-restore";
 
   // Check that the requested location exists
-  if (!file_exists($dump_location)) {
-    return "\nThe path does not exist: $dump_location\n\n";
-  }
+  if (!file_exists($dump_location)) {return "\nThe path does not exist: $dump_location\n\n";}
+  if (!file_exists($workspace_location)) {exec("mkdir -p $workspace_location");}
 
   // Set behavior depending on filter
   $tables_preserved = array();
@@ -611,7 +663,12 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
   foreach ($tables_restored as $table) {
     if (file_exists("$dump_location/tables/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/tables/$table.sql");
     if (file_exists("$dump_location/data/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/data/$table.sql");
+    if (file_exists("$dump_location/data/$table-new.sql")) exec("$mysql $db_connection_settings < $dump_location/data/$table-new.sql");
   }
+
+  // Move what was restored to the working space
+  if (exec("ls $workspace_location")) {exec("rm -r $workspace_location/*");}
+  exec("cp -R $dump_location/* $workspace_location");
 
   return "\n$message\n\n";
 }
