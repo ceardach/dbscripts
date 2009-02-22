@@ -1687,7 +1687,7 @@ function dbscripts_raise_all_increments($dev_branch = 'development', $lastmerge_
  * Return help for each script
  *
  * @param $script
- *   Available options are 'dump', 'restore', 'erase' and 'merge'.
+ *   Available options are 'dump', 'restore', 'erase', 'merge', 'find', 'raise_increments'.
  */
 function dbscripts_help($script) {
   require('config.inc');
@@ -1695,7 +1695,9 @@ function dbscripts_help($script) {
 
   switch ($script) {
 
-    // Dump help
+
+
+    // DUMP SCRIPT
     case 'dump':
       $help = <<<EOF
 
@@ -1703,7 +1705,7 @@ NAME
     Dump - database dump script
 
 SYNOPSIS
-    dump.php [branch] [filter-option]
+    dump.php [branch-to-dump] [last-merge-branch] [filter-option]
 
 EXAMPLE USAGE
     development: dump.php
@@ -1717,32 +1719,44 @@ DESCRIPTION
     development and production environments.
 
 OPTIONS
-    branch
+    branch-to-dump
         Branch the database should be dumped to.  Default options are
-        'development', 'production' and 'last-merge'.  Other naming patterns
-        may be used if you wish to dump the database to an alternate location.
+        'development', 'production' and 'last-merge'.  Other naming patterns,
+        including entire paths, may be used if you wish to dump the database to
+        an alternate location.
+
         Relative to: {$file_path}
         Defaults to: {$file_path}/development
+
+    last-merge-branch
+        Branch to compare with for finding new and existing data.  Default
+        option is 'last-merge'.  Other naming patterns, including entire paths,
+        may be used if you wish to compare to an alternate branch.
 
     filter-option
         The level of filtering that should be performed during the dump.
             full
-                Removes the full option of data from the dump.  Most useful for
-                removing user, sessions and cache data.  Recomended to be used
-                when dumping a development database
+                Removes the full option of data from the dump, and rewrites all
+                user timestamps with the 'last-merge' version.  Most useful for
+                removing user, sessions and cache data, and avoiding conflicts
+                with the user table.  Recomended to be used when dumping a
+                development database.
             min
                 Removes only a select minimum of data from the dump.  Most
                 useful for removing sessions and cache data.  Recommended to be
                 used when dumping a production database.
             none
                 NO filtering is performed whatsoever.  The entire database is
-                dumped to the given file.
+                dumped to the given branch.
+
         Defaults to: full
 
 FILES
     {$script_path}/config.inc
         Configuration settings for customizing these scripts for your
         environment.
+    {$script_path}/config.references.inc
+        Configuration settings for discovering table references.
 
 AUTHOR
     Kathleen Murtagh <kathleen@ceardach.com>
@@ -1759,7 +1773,9 @@ SEE ALSO
 EOF;
       break;
 
-    // Restore help
+
+
+    // RESTORE SCRIPT
     case 'restore':
       $help = <<<EOF
 
@@ -1778,14 +1794,16 @@ DESCRIPTION
     Restores the database from a given branch.  Filtering options are performed
     to prevent certain data from being lost in the MySQL database in
     development and production environments.  Also performs the 'erase' script
-    to ensure that any tables removed in development are removed when performing
-    a restore.
+    to ensure that any tables removed in development are removed when
+    performing a restore.
 
 OPTIONS
     branch
         The branch the database should be restored from.  Default options are
-        'development', 'production' and 'last-merge'.  Other naming patterns
-        may be used if you wish to restore the database from an alternate branch.
+        'development', 'production' and 'last-merge'.  Other naming patterns,
+        including entire paths, may be used if you wish to restore the database
+        from an alternate branch.
+
         Relative to: {$file_path}
         Defaults to: {$file_path}/development
 
@@ -1800,12 +1818,13 @@ OPTIONS
             min
                 Preserves only a select minimum of data currently residing
                 within the MySQL database.  Most useful for preserving sessions
-                and cache data.  Recommended to use this when restoring within a
-                production environment.
+                and cache data.  Recommended to use this when restoring within
+                a production environment.
             none
                 NO filtering is performed whatsoever.  The entire database is
-                erased from MySQL and restored with only the data from the given
-                file.
+                erased from MySQL and restored with only the data from the
+                given file.
+
         Defaults to: full
 
 FILES
@@ -1828,7 +1847,9 @@ SEE ALSO
 EOF;
       break;
 
-    // Erase help
+
+
+    // ERASE SCRIPT
     case 'erase':
       $help = <<<EOF
 
@@ -1862,6 +1883,7 @@ OPTIONS
             none
                 NO filtering is performed whatsoever.  The entire database will
                 be erased.
+
         Defaults to: full
 
 FILES
@@ -1884,6 +1906,9 @@ SEE ALSO
 EOF;
       break;
 
+
+
+    // MERGE SCRIPT
     case 'merge':
       $help = <<<EOF
 
@@ -1891,19 +1916,21 @@ NAME
     Merge - database merge script
 
 SYNOPSIS
-    merge.php [dev-branch] [last-merge-branch] [prod-branch]
+    merge.php [dev-branch] [last-merge-branch] [prod-branch] [continue]
 
 EXAMPLE USAGE
-    default: merge.php
+    default:        merge.php
+    continue merge: merge.php continue
 
 DESCRIPTION
     Merge a development and production database together.
 
 OPTIONS
     dev-branch
-        The location of the database branch used for development.  Only configuration
-        and content changes will be preserved from this file.  All user data
-        will be lost.
+        The location of the database branch used for development.  Only
+        configuration and content changes will be preserved from this file.
+        All user data will be lost.
+
         Relative to: {$file_path}
         Defaults to: {$file_path}/development
 
@@ -1912,20 +1939,29 @@ OPTIONS
         the last time both production development were merged.  This is
         important to be able to track the difference between an addition and a
         subtraction.
+
         Relative to: {$file_path}
         Defaults to: {$file_path}/last-merge
 
     prod-branch
-        The location of the database branch used for production.  Only content and
-        user data will be preserved from this branch.  All other data will be
-        lost.
+        The location of the database branch used for production.  Only content
+        and user data will be preserved from this branch.  All other data will
+        be lost.
+
         Relative to: {$file_path}
-        defaults to: {$file_path}/production
+        Defaults to: {$file_path}/production
+
+    continue
+        Use the 'continue' flag after resolving a conflict when a previous
+        merge attempt resulted in a conflict.  Leave blank to perform a full
+        merge.
 
 FILES
     {$script_path}/config.inc
         Configuration settings for customizing these scripts for your
         environment.
+    {$script_path}/config.references.inc
+        Configuration settings for discovering table references.
 
 AUTHOR
     Kathleen Murtagh <kathleen@ceardach.com>
@@ -1942,20 +1978,188 @@ SEE ALSO
 EOF;
       break;
 
-// TODO: Write help for "find"
+
+    // FIND SCRIPT
     case 'find':
       $help = <<<EOF
 
 NAME
-    Find - Search for information within the database
+    Find - Search for information about the database
 
+SYNOPSIS
+    find.php increment [branch] [filter-option]
+    find.php possible-references [table] [branch] [filter-option]
+    find.php references [table] [branch] [filter-option] [found]
 
+EXAMPLE USAGE
+    increment:                find.php increment production min
+    all increments:           find.php increment
+
+    possible references:      find.php possible-references node last-merge full
+    all possible references:  find.php possible-references
+
+    references:               find.php references users found
+    all references:           find.php references
+
+DESCRIPTION
+    Find information about the database.  Searches for auto_increment values,
+    possible references, actual configured references, or found references that
+    are not currently configured.
+
+OPTIONS
+    increment
+        Return the current increment of the given table.  If no table is
+        specified, returns information on all tables within the database.
+
+        Default Search: All tables with increments within the development
+                        branch, except for filtered tables.
+
+    possible-references
+        Returns all possible references it could find to the given table.  This
+        search is based on column names, so it will not find any references
+        that uses a non-similar column name.  If no table is specified, returns
+        all possible references across the entire database.
+
+        Default Search: All possible references within the development branch,
+                        except for filtered tables.
+
+    references
+        Returns the configured references, as set within the
+        '{$script_path}/config.references.inc' file, including a seperated
+        batch of discovered possible references that are not currently
+        configured.  Highly useful for ensuring references are properly
+        configured.
+
+        Default Search: All references within the development branch, except
+                        for filtered tables.
+
+    table
+        The specific table search for information about.  May also use 'all' to
+        search all tables.
+
+        Defaults to: all
+
+    branch
+        Branch to look for the information within.
+
+        Defaults to: development
+
+    filter-option
+        The option for filtering out tables you do not want included in your
+        search.
+
+        Defaults to: full
+
+    found
+        Set this flag when searching 'references' to return only newly
+        discovered references instead of all configured references.  Useful for
+        updating your configuration script.  Otherwise, leave blank.
+
+FILES
+    {$script_path}/config.inc
+        Configuration settings for customizing these scripts for your
+        environment.
+    {$script_path}/config.references.inc
+        Configuration settings for discovering table references.
+
+AUTHOR
+    Kathleen Murtagh <kathleen@ceardach.com>
+        http://drupal.org/user/79082
+
+SEE ALSO
+    dbscripts documentation
+        http://drupal.org/node/232151
+
+    Online ocumentation is not up-to-date for the 2.x version
 \n
 EOF;
       break;
 
+
+    // RAISE INCREMENTS SCRIPT
+    case 'raise_increments':
+      $help = <<<EOF
+
+NAME
+    Raise Increments -  Raise increments, and all tables that use it as a
+                        foreign key
+
+SYNOPSIS
+   raise_increments.php [table] [start-at] [change-to] [branch] [filter-option]
+
+EXAMPLE USAGE
+    table:  raise_increments.php node 50 100
+    all:    raise_increments.php all
+
+DESCRIPTION
+    Raise all the AUTO_INCREMENT values of the given table, and all tables that
+    use that value as a foreign key.  Optionally raise all values of a
+    development branch to be above that of the production branch, starting with
+    the increment values of the last-merge branch.
+
+OPTIONS
+    table
+        The specific table to raise the increments of, and all tables that use
+        the table as a foreign key.
+
+        When set to 'all', the other options are ignored.  Instead it will
+        raise the increments of all tables in the development branch to be
+        above the values of the production branch, starting at the increment
+        values of the last-merge branch.  There is no way to configure what is
+        considered 'development', 'production' and 'last-merge' at this time,
+        so the default values will be used.
+
+        Defaults to: all
+
+    start-at
+        The increment value to start at.
+
+        No default value, fails when 'table' is not 'all' and this value is
+        unset.
+
+    change-to
+        The increment value to change to.  All values since 'start-at' will be
+        changed to be above the 'change-to' value.
+
+        No default value, fails when 'table' is not 'all' and this value is
+        unset.
+
+    branch
+        Branch to change.
+
+        Defaults to: development
+
+    filter-option
+        The option for filtering out tables you do not want included when
+        changing values.  Possible options are 'full', 'min' and 'none'.
+
+        Defaults to: full
+
+FILES
+    {$script_path}/config.inc
+        Configuration settings for customizing these scripts for your
+        environment.
+    {$script_path}/config.references.inc
+        Configuration settings for discovering table references.
+
+AUTHOR
+    Kathleen Murtagh <kathleen@ceardach.com>
+        http://drupal.org/user/79082
+
+SEE ALSO
+    dbscripts documentation
+        http://drupal.org/node/232151
+
+    Online ocumentation is not up-to-date for the 2.x version
+\n
+EOF;
+      break;
+
+
+
     default:
-      $help = 'That is not a valid script.'."\n";
+      $help = "\n\nThat is not a valid script.  Try one of these options:\n";
+      $help .= "dump erase restore merge find raise_increments";
       break;
   }
 
