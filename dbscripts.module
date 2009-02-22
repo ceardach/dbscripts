@@ -35,20 +35,35 @@ function dbscripts_db_connect() {
  *   the script.
  */
 function dbscripts_get_options($argv) {
-  $use_default = FALSE;
+  $use_default_branch = FALSE;
   if(isset($argv[1])) {
     if(in_array($argv[1],array('min','none','full'))) {
-      $use_default = TRUE;
+      $use_default_branch = TRUE;
     }
   } else {
-    $use_default = TRUE;
+    $use_default_branch = TRUE;
   }
 
-  if ($use_default) {
-    $options['file'] = 'development';
-    $filter_options = isset($argv[1]) ? $argv[1] : '';
+  $use_default_lastmerge = FALSE;
+  if(isset($argv[2])) {
+    if(in_array($argv[2],array('min','none','full'))) {
+      $use_default_lastmerge = TRUE;
+    }
   } else {
-    $options['file'] = $argv[1];
+    $use_default_lastmerge = TRUE;
+  }
+
+  $options['branch'] = $use_default_branch ? 'development' : $argv[1];
+  $options['last-merge'] = $use_default_lastmerge ? 'last-merge' : $argv[2];
+
+
+  if ($use_default_branch) {
+    if ($use_default_lastmerge) {
+      $filter_options = isset($argv[3]) ? $argv[3] : '';
+    } else {
+      $filter_options = isset($argv[1]) ? $argv[1] : '';
+    }
+  } else {
     $filter_options = isset($argv[2]) ? $argv[2] : '';
   }
 
