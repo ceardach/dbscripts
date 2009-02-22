@@ -13,12 +13,17 @@
   Have script to complete merge process after conflict (merge.php finish)
 **/
 
+
 /**
  * Get the database connection settings from settings.php file
  */
 function dbscripts_db_connect() {
   require('config.inc');
   require("$settings_path/settings.php");
+
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+  if (!isset($db_url)) return "The file 'settings.php' file does not exist.";
 
   preg_match('/'.$dbtype.':\/\/([^:]+):([^@]+)@([^\/]+)\/(.+)/', $db_url, $db_settings);
 
@@ -102,6 +107,9 @@ function dbscripts_get_options($argv) {
 function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   require('config.inc');
 
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+
   $db_connection_settings = dbscripts_db_connect();
   if (!$db_connection_settings) {
     return "\nImproper database connection settings.\n\n";
@@ -160,8 +168,14 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
   if (exec("ls $workspace_location/tables")) exec("rm $workspace_location/tables/*");
   exec("mv $temp_location/* $workspace_location/tables");
 
-  // Dump the data of all tables we're tracking
+  // Get tables to be dumped by removing $tables_cleared from the list of all tables
   $tables_dumped = dbscripts_process_tables("workspace/last-dump", $tables_cleared);
+  if (!is_array($tables_dumped)) {
+    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
+    return "\n$tables_dumped\n\n";
+  }
+
+  // Dump the data of all tables we're tracking
   foreach ($tables_dumped as $table) {
     // get the table's increment both currently, and last-merge and compare
     $increment_current = dbscripts_table_increment($table, 'workspace/last-dump');
@@ -222,6 +236,9 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full') {
  */
 function dbscripts_erase($filter_option = 'full') {
   require('config.inc');
+
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
 
   $db_connection_settings = dbscripts_db_connect();
   if (!$db_connection_settings) {
@@ -285,6 +302,9 @@ function dbscripts_erase($filter_option = 'full') {
 function dbscripts_restore($branch = 'development', $filter_option = 'full') {
   require('config.inc');
 
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+
   $db_connection_settings = dbscripts_db_connect();
   if (!$db_connection_settings) {
     return "\nImproper database connection settings.\n\n";
@@ -319,8 +339,14 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
   // Erase the database so any tables that were removed stay removed
   dbscripts_erase($filter_option);
 
-  // Restore each database file
+  // Get a list of tables to restore by removing $tables_preserved from the list of all tables
   $tables_restored = dbscripts_process_tables($branch, $tables_preserved);
+  if (!is_array($tables_restored)) {
+    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
+  	return "\n$tables_restored\n\n";
+  }
+
+  // Restore each database file
   foreach ($tables_restored as $table) {
     if (file_exists("$dump_location/tables/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/tables/$table.sql");
     if (file_exists("$dump_location/data/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/data/$table.sql");
@@ -356,6 +382,9 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
 function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-merge', $prod_branch = 'production') {
   require('config.inc');
 
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+
   $message = "WARNING: This merge only merges tables, not data\n\n";
 
   // If empty data gets sent through, reset it to defaults
@@ -390,10 +419,19 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
   // Creating merge folders
   if (!file_exists($merge_location)) exec("mkdir -p $merge_location/tables $merge_location/data");
 
-  // Define the tables
+  // Define the tables, fail if they don't return arrays
   $tables_content = dbscripts_process_tables($dev_branch, $tables_merge, FALSE);
+  if (!is_array($tables_content)) {
+  	return "\n$tables_content\n\n";
+  }
   $tables_prod = dbscripts_process_tables($prod_branch, $tables_override, FALSE);
+  if (!is_array($tables_prod)) {
+    return "\n$tables_prod\n\n";
+  }
   $tables_dev = dbscripts_process_tables($dev_branch, array_merge($tables_merge, $tables_override));
+  if (!is_array($tables_dev)) {
+    return "\n$tables_dev\n\n";
+  }
 
   // Move all development tables and data to the temp merge location
   foreach ($tables_dev as $table) {
@@ -422,6 +460,10 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
 
   // Dev and last-merge do not need to be bothered with all the data
   $tables_dev_data = dbscripts_process_tables($dev_branch, array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2));
+  if (!is_array($tables_dev_data)) {
+    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
+    return "\n$tables_dev_data\n\n";
+  }
   foreach ($tables_dev_data as $table) {
   	if (file_exists("$merge_location/data/$table.sql")) exec("cp $merge_location/data/$table.sql $dev_location/data");
   }
@@ -452,7 +494,23 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
 function dbscripts_process_tables($branch, $tables_compare, $remove_match = TRUE) {
   require('config.inc');
 
-  $tables = file("$dump_path/$branch/table_list.txt", FILE_IGNORE_NEW_LINES);
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+
+  // Set location
+  $branch_location = "$dump_path/$branch";
+
+  // Check if the branch exists, otherwise fail
+  if (!file_exists($branch_location)) {
+    return "The branch '$branch' does not exist";
+  }
+
+  // Check if the table list file exists, otherwise fail
+  if (!file_exists("$branch_location/table_list.txt")) {
+    return "The branch '$branch' does not have a table_list.txt file";
+  }
+
+  $tables = file("$branch_location/table_list.txt", FILE_IGNORE_NEW_LINES);
   $tables_match = array();
 
   foreach ($tables as $key => $table) {
@@ -493,7 +551,15 @@ function dbscripts_process_tables($branch, $tables_compare, $remove_match = TRUE
 function dbscripts_get_table_increment($table, $branch) {
   require('config.inc');
 
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+
   $branch_location = "$dump_path/$branch";
+
+  // Check if the branch exists, otherwise fail
+  if (!file_exists($branch_location)) {
+    return "The branch '$branch' does not exist";
+  }
 
   $increment = FALSE;
   if(file_exists("$branch_location/tables/$table.sql")) {
@@ -532,8 +598,16 @@ function dbscripts_get_table_increment($table, $branch) {
 function dbscripts_find_tables_with_increment($branch, $filter_option = "full") {
   require('config.inc');
 
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+
   // Set location
   $branch_location = "$dump_path/$branch";
+
+  // Check if the branch exists, otherwise fail
+  if (!file_exists($branch_location)) {
+    return "The branch '$branch' does not exist";
+  }
 
   // Set the filtering options, ignoring tables not being tracked
   $tables_ignored = array();
@@ -551,12 +625,19 @@ function dbscripts_find_tables_with_increment($branch, $filter_option = "full") 
   }
 
   $table_list = dbscripts_process_tables($branch, $tables_ignored);
+  if (!is_array($table_list)) {
+    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
+    return $table_list;
+  }
 
   $list = array();
   foreach ($table_list as $table) {
     $increment = dbscripts_get_table_increment($table, $branch);
-    if ($increment) {
+    if ($increment && is_array($increment)) {
       $list[] = $table;
+    } elseif ($increment != FALSE) {
+      // If not FALSE and not an array, then fail and pass through the error message
+    	return $increment;
     }
   }
 
@@ -570,6 +651,11 @@ function dbscripts_find_tables_with_increment($branch, $filter_option = "full") 
  * Helper script to make it easier to discover if there are possible references
  * to a given table.
  *
+ * DOES NOT GAURANTEE TO FIND ALL REFERENCES
+ * This is merely a tool to assist you in narrowing down possibilities and provide a
+ * first level of error checking for dbscripts_get_table_references.  It is your
+ * responsibility to ensure all actual references are recorded in config.references.inc
+ *
  * @param $table
  *    Table to find all references of
  * @param $branch
@@ -581,9 +667,20 @@ function dbscripts_find_tables_with_increment($branch, $filter_option = "full") 
 function dbscripts_find_possible_table_references($table, $branch, $filter_option = "full") {
   require('config.inc');
 
-  // Set location
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+
+  // Set locations
   $branch_location = "$dump_path/$branch";
   $temp_location = "$dump_path/tmp";
+
+  // Check if the branch exists, otherwise fail
+  if (!file_exists($branch_location)) {
+    return "The branch '$branch' does not exist";
+  }
+
+  // Ensure tmp directory exists
+  if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
 
   // Set the filtering options, ignoring tables not being tracked
   $tables_ignored = array();
@@ -602,9 +699,17 @@ function dbscripts_find_possible_table_references($table, $branch, $filter_optio
 
   // List of tables to check
   $table_list = dbscripts_process_tables($branch, $tables_ignored);
+  if (!is_array($table_list)) {
+    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
+    return $table_list;
+  }
 
   // Get the id name of the table
   $increment = dbscripts_get_table_increment($table, $branch);
+  if (!is_array($increment) && $increment != FALSE) {
+    // If not FALSE and not an array, then fail and pass through the error message
+  	return $increment;
+  }
   $id = isset($increment['id']) ? $increment['id'] : FALSE;
 
   $list = FALSE;
@@ -612,6 +717,10 @@ function dbscripts_find_possible_table_references($table, $branch, $filter_optio
     foreach ($table_list as $check_table) {
       // Ensure this table doesn't use the same ID name for auto increment as well
       $match_increment = dbscripts_get_table_increment($check_table, $branch);
+      if (!is_array($match_increment) && $match_increment != FALSE) {
+        // If not FALSE and not an array, then fail and pass through the error message
+        return $match_increment;
+      }
       $match_id = isset($match_increment['id']) ?  $match_increment['id'] : FALSE;
 
       if ($match_id != $id) {
@@ -635,6 +744,177 @@ function dbscripts_find_possible_table_references($table, $branch, $filter_optio
 
 
 /**
+ * Return actual references to a given table
+ *
+ * Checks against dbscripts_find_possible_table_references to ensure there are no
+ * obvious tables that could have been missed during development.  Update settings
+ * in config.reference.inc to reflect any new references and false positives.
+ *
+ * DOES NOT GUARANTEE TO RETURN ALL REFERENCES
+ * It only returns what is configured in config.reference.inc, and checks that
+ * configuration against dbscripts_find_possible_table_references for *possible*
+ * matches that you may have missed during development.  It is your responcibility
+ * to check the database schema for references (such as by checking the diff after
+ * a change).
+ *
+ * @param $table
+ *    Table to find all references of
+ * @param $branch
+ *    Branch to check
+ * @param $filter_option
+ *    What degree of filtering should be done on the tables returned, just
+ *    like when dumping and restoring.
+ */
+function dbscripts_get_table_references($table, $branch, $filter_option = 'full') {
+  require('config.inc');
+  require('config.references.inc');
+
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+  if (!isset($tables_referenced)) return "The file 'config.references.inc' does not exist.  Copy from the example version?";
+
+  // Set locations
+  $branch_location = "$dump_path/$branch";
+  $temp_location = "$dump_path/tmp";
+
+  // Check if the branch exists, otherwise fail
+  if (!file_exists($branch_location)) {
+  	return "The branch '$branch' does not exist";
+  }
+
+  // Ensure tmp directory exists
+  if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
+
+  $increment = dbscripts_get_table_increment($table, $branch);
+  if (!is_array($increment) && $increment != FALSE) {
+    // If not FALSE and not an array, then fail and pass through the error message
+    return $increment;
+  }
+
+  if (!(!in_array($table, $tables_standalone) && isset($increment))) {
+    // Without an increment, or configured as standalone, we don't need to continue
+    $references = FALSE;
+  } else {
+
+    $config_references = isset($tables_referenced[$table]['references']) ? $tables_referenced[$table]['references'] : array();
+    $config_false_positive = isset($tables_referenced[$table]['false positives']) ? $tables_referenced[$table]['false positives'] : array();
+
+    // The table list file is important, so fail if it doesn't exist
+    if (!file_exists("$branch_location/table_list.txt")) {
+    	return "The branch '$branch' does not have a table_list.txt file";
+    }
+
+    $table_list = file("$branch_location/table_list.txt", FILE_IGNORE_NEW_LINES);
+
+    // Since you can set the configuration with *'s, creating an array $references of real values
+    $references = array();
+    foreach ($table_list as $check_table) {
+      // Format possible values for the table name
+      $table_name_parts = explode("_", $check_table);
+      $check_table_1 = isset($table_name_parts[1]) ? $table_name_parts[0]."_.*" : FALSE;
+      $check_table_2 = isset($table_name_parts[2]) ? $table_name_parts[0]."_".$table_name_parts[1]."_.*" : FALSE;
+      $check_table_3 = isset($table_name_parts[3]) ? $table_name_parts[0]."_".$table_name_parts[1]."_".$table_name_parts[2]."_.*" : FALSE;
+      $possible_table_names = array($check_table, $check_table_1, $check_table_2, $check_table_3);
+
+      // Check all possible values for the table name
+      foreach ($possible_table_names as $check) {
+        if ($check && (isset($config_references[$check]) || isset($config_false_positive[$check]))) {
+          // Check to see if any of the configured column names for that table have a wildcard
+          $wildcard = FALSE;
+          if (isset($config_references[$check])) {
+            foreach ($config_references[$check] as $column) {
+              if (strpos($column, '*') !== FALSE) {
+              	$wildcard = TRUE;
+              }
+            }
+          }
+          if (isset($config_false_positive[$check])) {
+            foreach ($config_false_positive[$check] as $column) {
+              if (strpos($column, '*') !== FALSE) {
+                $wildcard = TRUE;
+              }
+            }
+          }
+
+          // If there is a wildcard, we need to find all possible matches in the table
+          if ($wildcard) {
+            // Get all columns for the given table
+            exec("grep '^  `' $branch_location/tables/$check_table.sql > $temp_location/columns.sql");
+            $column_values = file("$temp_location/columns.sql");
+
+            // Check each column
+            foreach ($column_values as $column_value) {
+              // Extract the column name
+            	$column_value_parts = explode('`', $column_value);
+              $column_name = $column_value_parts[1];
+
+              // Format other possible values for the column name
+              $column_name_parts = explode("_", $column_name);
+              $column_num_parts = count($column_name_parts);
+              $column_last_part = $column_num_parts -1;
+              $column_name_1 = isset($column_name_parts[1]) ? $column_name_parts[0]."_*" : FALSE;
+              $column_name_2 = isset($column_name_parts[2]) ? $column_name_parts[0]."_*_".$column_name_parts[$column_last_part] : FALSE;
+              $possible_column_names = array($column_name, $column_name_1, $column_name_2);
+
+              // Check all the possible column names
+              foreach ($possible_column_names as $possible_column_name) {
+                if ($possible_column_name) {
+                  if (isset($config_references[$check]) && in_array($possible_column_name, $config_references[$check])) {
+                    $references['references'][$check_table][] = $column_name;
+                  }
+                  if (isset($config_false_positive[$check]) && in_array($possible_column_name, $config_false_positive[$check])) {
+                    $references['false positives'][$check_table][] = $column_name;
+                  }
+                }
+              }
+            }
+
+            // Erase the temporary file
+            exec("rm $temp_location/columns.sql");
+
+          } else {
+          	// Without a wildcard as the column name we can just return what was configured
+            if (isset($config_references[$check])) {
+              $references['references'][$check_table] = $config_references[$check];
+            }
+            if (isset($config_false_positive[$check])) {
+              $references['false positives'][$check_table] = $config_false_positive[$check];
+            }
+          }
+
+        }
+      }
+    }
+
+    // Now checking the real values against the discovered possible references
+    $possible_references = dbscripts_find_possible_table_references($table, $branch, $filter_option);
+    if(is_array($possible_references)) {
+      foreach ($possible_references as $check_table => $check_ids) {
+        foreach ($check_ids as $check_id) {
+
+          // Check to see if the possible reference is in the references list as found above
+          $check_references = isset($references['references'][$check_table]) ? in_array($check_id, $references['references'][$check_table]) : FALSE;
+          $check_false_positive = isset($references['false positives'][$check_table]) ? in_array($check_id, $references['false positives'][$check_table]) : FALSE;
+
+          // If it is not in either, then record it under 'found'
+          if(!$check_references && !$check_false_positive) {
+            $references['found'][$check_table][] = $check_id;
+          }
+
+        }
+      }
+    } else {
+    	// If an array is not returned, then pass through the error message
+      return $possible_references;
+    }
+
+  }
+
+  return $references;
+}
+
+
+/**
  * Return help for each script
  *
  * @param $script
@@ -642,6 +922,7 @@ function dbscripts_find_possible_table_references($table, $branch, $filter_optio
  */
 function dbscripts_help($script) {
   require('config.inc');
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
 
   switch ($script) {
 
