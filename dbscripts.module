@@ -1299,6 +1299,10 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
     }
   }
 
+  // Raise the auto_increment value of the table
+  exec("sed 's/ AUTO_INCREMENT={$current_inc['num']} / AUTO_INCREMENT={$increment_change} /g' $branch_location/tables/$table.sql > $temp_location/$table.sql");
+  exec("mv $temp_location/$table.sql $branch_location/tables/$table.sql");
+
   // For all references, raise the increment
   foreach ($table_references['references'] as $table_to_modify => $columns_referenced) {
 
@@ -1431,12 +1435,10 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
         exec("rm $temp_location/$file_name-tmp.sql");
       }
 
-      // TODO: Raise the auto_increment value of the table
-
     }
   }
 
-  // Delete temporary files
+  // Delete temporary file
   exec("rm $temp_location/increment_pairs.awk");
 
   // Since we got this far without error, we can now move
