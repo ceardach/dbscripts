@@ -584,17 +584,15 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
   print "\n"; // gheto status messages
 
   // Move all development tables and data to the temp merge location
-  foreach ($tables_dev as $table) {
+  foreach (array_merge($tables_dev, $tables_content) as $table) {
   	if (file_exists("$tmpdev_location/tables/$table.sql")) exec("cp $tmpdev_location/tables/$table.sql $merge_location/tables");
     if (file_exists("$tmpdev_location/data/$table.sql")) exec("cp $tmpdev_location/data/$table.sql $merge_location/data");
-    if (file_exists("$tmpdev_location/data/$table-new.sql")) exec("cp $tmpdev_location/data/$table-new.sql $merge_location/data");
   }
 
   // Move all the production tables and data to the temp merge location
   foreach ($tables_prod as $table) {
     if (file_exists("$prod_location/tables/$table.sql")) exec("cp $prod_location/tables/$table.sql $merge_location/tables");
     if (file_exists("$prod_location/data/$table.sql")) exec("cp $prod_location/data/$table.sql $merge_location/data");
-    if (file_exists("$prod_location/data/$table-new.sql")) exec("cp $prod_location/data/$table-new.sql $merge_location/data");
   }
 
   // DATA MERGING
@@ -710,12 +708,10 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
     if (file_exists("$lastmerge_location/data/$table.sql")) exec("rm $lastmerge_location/data/$table.sql");
   }
 
-  $message .= "Merge was successfull.";
-
   // Clear temp
   exec("rm -r $temp_location/*");
 
-  return "\n$message\n\n";
+  return "\nMerge was successfull.\n\n";
 }
 
 
