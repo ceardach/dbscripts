@@ -3,8 +3,8 @@
 /**
  * Path Settings
  *   - Relative path from where you would be running the scripts
- *     (assumed to be your version control root, which may or may not differ from
- *     your web root)
+ *     (assumed to be your version control root, which may or may not differ
+ *     from your web root)
  *   - Do not use trailing slashes
  */
 
@@ -24,8 +24,27 @@ $mysqldump = 'mysqldump';
 // Charset location
 $charsets = '/usr/local/share/mysql/charsets';
 
-//Database type (mysql, mysqli)
+// Database type (mysql, mysqli)
 $dbtype = 'mysqli';
+
+
+/**
+ * Auto Increment IDs Handling
+ *
+ * DBScripts comes with a method to automatically raise increments of new
+ * content within the development branch to be above the production branch.
+ * This method may have unexpected results if you are not careful in how you
+ * manage using content with auto_increment IDs.  Other external methods may be
+ * used, such as a patch to Drupal core, or setting a server-wide MySQL setting
+ * for increment_increment and increment_offset -- or any other method you know
+ * of.
+ *
+ * Set to TRUE to use the built-in dbscripts method to raise increments.
+ *
+ * Set to FALSE to use your own auto_increment handling method.
+ */
+
+$raise_increments_on_merge = FALSE;
 
 
 
@@ -77,10 +96,11 @@ $tables_filtered_l2 =  array(
 
 /**
  * Classifying Tables
- * Should the data be taken from development, production, or be merged from the two
+ * Should the data be taken from development, production, or be merged
  */
 
-// Tables that contain content to be merged from both development and production
+// Tables that contain content to be merged from both development and
+// production
 $tables_merge = array(
   'aggregator_category',
   'aggregator_category_feed',
