@@ -1,4 +1,4 @@
-#!/usr/bin/awk -f
+#!/usr/bin/env awk -f
 
 {
   num_fields = parse_csv($0, csv, ",", "'", "'", "\\n", 1);
