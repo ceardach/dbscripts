@@ -24,8 +24,27 @@ $mysqldump = 'mysqldump';
 // Charset location
 $charsets = '/usr/local/share/mysql/charsets';
 
-//Database type (mysql, mysqli)
+// Database type (mysql, mysqli)
 $dbtype = 'mysqli';
+
+
+/**
+ * Auto Increment IDs Handling
+ *
+ * DBScripts comes with a method to automatically raise increments of new
+ * content within the development branch to be above the production branch.
+ * This method may have unexpected results if you are not careful in how you
+ * manage using content with auto_increment IDs.  Other external methods may be
+ * used, such as a patch to Drupal core, or setting a server-wide MySQL setting
+ * for increment_increment and increment_offset -- or any other method you know
+ * of.
+ *
+ * Set to TRUE to use the built-in dbscripts method to raise increments.
+ *
+ * Set to FALSE to use your own auto_increment handling method.
+ */
+
+$raise_increments_on_merge = FALSE;
 
 
 

@@ -704,27 +704,29 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
       return "\n$tables_dev\n\n";
     }
 
-    // Raise all the increments of the content tables of development to above production values
-    print "\nRaising increments of the '$dev_branch' branch ";
-    foreach ($tables_content as $table) {
-      print "."; // gheto status messages
-      // Find the last-merge value
-      $lastmerge_increment = dbscripts_get_table_increment($table, $lastmerge_branch);
-      $start_at = $lastmerge_increment['num'];
+    // Raise all the increments of the content tables of development to above be production values
+    if ($raise_increments_on_merge) {
+      print "\nRaising increments of the '$dev_branch' branch ";
+      foreach ($tables_content as $table) {
+        print "."; // gheto status messages
+        // Find the last-merge value
+        $lastmerge_increment = dbscripts_get_table_increment($table, $lastmerge_branch);
+        $start_at = $lastmerge_increment['num'];
 
-      // Find the production value
-      $production_increment = dbscripts_get_table_increment($table, $prod_branch);
-      $change_to = $production_increment['num'];
+        // Find the production value
+        $production_increment = dbscripts_get_table_increment($table, $prod_branch);
+        $change_to = $production_increment['num'];
 
-      if ($start_at < $change_to) {
-        // Raise the increments
-        $action = dbscripts_raise_table_increments($table, $start_at, $change_to, $tmpdev_branch);
-        if (!$action) {
-          return "\nFAILED: Merge failed. Cannot continue if there are unconfigured references.\n\n";
+        if ($start_at < $change_to) {
+          // Raise the increments
+          $action = dbscripts_raise_table_increments($table, $start_at, $change_to, $tmpdev_branch);
+          if (!$action) {
+            return "\nFAILED: Merge failed. Cannot continue if there are unconfigured references.\n\n";
+          }
         }
       }
+      print "\n"; // gheto status messages
     }
-    print "\n"; // gheto status messages
 
     // Move all development tables and data to the temp merge location
     foreach (array_merge($tables_dev, $tables_content) as $table) {
