@@ -1,4 +1,4 @@
-#!/usr/bin/awk -f
+#!/usr/bin/env awk -f
 #**************************************************************************
 #
 # This file is in the public domain.
