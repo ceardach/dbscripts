@@ -44,7 +44,7 @@ $dbtype = 'mysqli';
  * Set to FALSE to use your own auto_increment handling method.
  */
 
-$raise_increments_on_merge = FALSE;
+$raise_increments_on_merge = TRUE;
 
 
 
