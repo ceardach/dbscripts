@@ -3,8 +3,8 @@
 /**
  * Path Settings
  *   - Relative path from where you would be running the scripts
- *     (assumed to be your version control root, which may or may not differ from
- *     your web root)
+ *     (assumed to be your version control root, which may or may not differ
+ *     from your web root)
  *   - Do not use trailing slashes
  */
 
@@ -96,10 +96,11 @@ $tables_filtered_l2 =  array(
 
 /**
  * Classifying Tables
- * Should the data be taken from development, production, or be merged from the two
+ * Should the data be taken from development, production, or be merged
  */
 
-// Tables that contain content to be merged from both development and production
+// Tables that contain content to be merged from both development and
+// production
 $tables_merge = array(
   'aggregator_category',
   'aggregator_category_feed',

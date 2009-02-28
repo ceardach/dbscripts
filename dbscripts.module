@@ -94,8 +94,8 @@ function dbscripts_get_options($argv) {
  *   'last-merge'.  Other string patterns may be used if you wish to dump the
  *   the database to an alternate location.
  * @param $filter_option
- *   Choose what level of filtering should be performed during the dump.  Filter
- *   levels are configured in config.inc
+ *   Choose what level of filtering should be performed during the dump.
+ *   Filter levels are configured in config.inc
  *   'full' - Default option.  Removes the full option of data from the dump.
  *       Most useful for removing user, sessions and cache data.  Use this when
  *       dumping a development database.
@@ -416,15 +416,16 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
  * @param $filter_option
  *   Choose what level of filtering should be performed while erasing the
  *   database.  Filter levels are configured in config.inc.  Any options set to
- *   be filtered will be subsequently PRESERVED in the database, and not erased.
+ *   be filtered will be subsequently PRESERVED in the database, and not
+ *   erased.
  *   'full' - Default option.  Preserves the full option of data from the dump.
  *       Most useful for keeping user, sessions and cache data.  Use this when
  *       erasing a development database.
- *   'min' - Preserves only a select minimum of data from the dump.  Most useful
- *       for keeping sessions data so you don't get logged out.  Use this when
- *       erasing a production database.
- *   'none' - NO filtering is performed whatsoever.  The entire database will be
- *       erased.
+ *   'min' - Preserves only a select minimum of data from the dump.  Most
+ *       useful for keeping sessions data so you don't get logged out.  Use
+ *       this when erasing a production database.
+ *   'none' - NO filtering is performed whatsoever.  The entire database will
+ *       be erased.
  */
 function dbscripts_erase($filter_option = 'full') {
   require('config.inc');
@@ -1072,9 +1073,10 @@ function dbscripts_get_table_primary_keys($table, $branch) {
  * to a given table.
  *
  * DOES NOT GAURANTEE TO FIND ALL REFERENCES
- * This is merely a tool to assist you in narrowing down possibilities and provide a
- * first level of error checking for dbscripts_get_table_references.  It is your
- * responsibility to ensure all actual references are recorded in config.references.inc
+ * This is merely a tool to assist you in narrowing down possibilities and
+ * provide a first level of error checking for dbscripts_get_table_references.
+ * It is your responsibility to ensure all actual references are recorded in
+ * config.references.inc
  *
  * @param $table
  *    Table to find all references of
@@ -1163,16 +1165,17 @@ function dbscripts_find_possible_table_references($table, $branch, $filter_optio
 /**
  * Return actual references to a given table
  *
- * Checks against dbscripts_find_possible_table_references to ensure there are no
- * obvious tables that could have been missed during development.  Update settings
- * in config.reference.inc to reflect any new references and false positives.
+ * Checks against dbscripts_find_possible_table_references to ensure there are
+ * no obvious tables that could have been missed during development.  Update
+ * settings in config.reference.inc to reflect any new references and false
+ * positives.
  *
  * DOES NOT GUARANTEE TO RETURN ALL REFERENCES
  * It only returns what is configured in config.reference.inc, and checks that
- * configuration against dbscripts_find_possible_table_references for *possible*
- * matches that you may have missed during development.  It is your responcibility
- * to check the database schema for references (such as by checking the diff after
- * a change).
+ * configuration against dbscripts_find_possible_table_references for
+ * *possible* matches that you may have missed during development.  It is your
+ * responcibility to check the database schema for references (such as by
+ * checking the diff after a change).
  *
  * @param $table
  *    Table to find all references of
@@ -1344,9 +1347,9 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
  * @param $start_at
  *   Range of increments within the table to start rewriting
  * @param $change_to
- *   Range to change rewrite the increments to.  Must be higher than both $start_at,
- *   and the table's current increment value.  If it is not, then it will be recalculated
- *   to be the highest value.
+ *   Range to change rewrite the increments to.  Must be higher than both
+ *   $start_at, and the table's current increment value.  If it is not, then it
+ *   will be recalculated to be the highest value.
  * @param $branch
  *   Branch to make the changes on.
  */
@@ -1614,19 +1617,19 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
 
 
 /**
- * Raise all increments of a given branch based on the values of the last-merge and
- * production branches
+ * Raise all increments of a given branch based on the values of the last-merge
+ * and production branches
  *
  * @param $dev_branch
- *   Location of the branch you wish to make the changes on.  All actions will effect
- *   and modify this branch.
+ *   Location of the branch you wish to make the changes on.  All actions will
+ *   effect and modify this branch.
  * @param $lastmerge_branch
  *   Location of the branch that was used to represent the state the
  *   last time the other two branches were merged.  This is used as reference
  *   to discover the start of increment rewriting.
  * @param $prod_branch
- *   Location of the branch that will be used as reference to discover at which point
- *   the rewrite should start at.
+ *   Location of the branch that will be used as reference to discover at which
+ *   point the rewrite should start at.
  */
 function dbscripts_raise_all_increments($dev_branch = 'development', $lastmerge_branch = 'last-merge', $prod_branch = 'production') {
   require('config.inc');
@@ -1689,7 +1692,8 @@ function dbscripts_raise_all_increments($dev_branch = 'development', $lastmerge_
  * Return help for each script
  *
  * @param $script
- *   Available options are 'dump', 'restore', 'erase', 'merge', 'find', 'raise_increments'.
+ *   Available options are 'dump', 'restore', 'erase', 'merge', 'find',
+ *   'raise_increments'.
  */
 function dbscripts_help($script) {
   require('config.inc');
