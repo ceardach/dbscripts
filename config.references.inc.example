@@ -8,6 +8,7 @@
 // Make sure these are tables you are sure will never be referenced because there will
 //    be no error checking.  If you are unsure, then place this in $tables_referenced
 //    and set 'false positives'
+
 $tables_standalone = array(
   'access',
   'advanced_help_index',
@@ -34,6 +35,7 @@ $tables_standalone = array(
 // long_table_name_.*
 // field_*
 // field_*_type
+
 $tables_referenced = array(
 
   'actions_aid' => array(
@@ -289,31 +291,56 @@ $tables_referenced = array(
 
 
 
-// System paths that have to be updated
-// The wildcard '*' symbolizes that table's primary key
+// Record system paths that have to be updated
 //
-// You will have to manually edit this for every custom view
+// The wildcard '*' symbolizes that table's auto_increment value
+//
+// VIEWS ARE NOT SUPPORTED: Due to the method that views stores its data, it is
+// impossible to perform a string match and replace.  Record any references made
+// to specific NEWLY CREATED node/users/terms since the last merge
+// in 'PostMergeInstructions.txt' and update the view after merging.  Direct
+// references to nodes created before the last merge will cause no
+// difficulties.
+//
+// Patterns tracks *exact* values of the columns' entire string.  Fuzzy will perform a search and replace
+//
+// Do not use the # character in any pattern
+// Use two \'s for a single \
+
 $system_paths = array(
   'node' => array(
     'patterns' => array('node/*', 'node/*/edit', 'node/*/feed'),
+    'fuzzy' => array('s:#NUMLEN+5#:\\"node/*\\";', 's:3:\\"nid\\";s:#NUMLEN#:\\"*\\";'),
     'tables' => array(
+      'content_node_field_instance' => array('widget_settings'),
       'menu_links' => array('link_path', 'router_path'),
       'menu_router' => array('path', 'tab_parent', 'tab_root'),
       'url_alias' => array('src'),
+      'variable' => array('value'),
     ),
   ),
 
   'term_data' => array(
     'patterns' => array('taxonomy/term/*', 'taxonomy/term/*/feed'),
+    'fuzzy' => array('s:#NUMLEN+5#:\\"term/*\\";', 's:3:\\"tid\\";s:#NUMLEN#:\\"*\\";'),
     'tables' => array(
+      'content_node_field_instance' => array('widget_settings'),
+      'menu_links' => array('link_path', 'router_path'),
+      'menu_router' => array('path', 'tab_parent', 'tab_root'),
       'url_alias' => array('src'),
+      'variable' => array('value'),
     ),
   ),
 
   'users' => array(
     'patterns' => array('user/*'),
+    'fuzzy' => array('s:#NUMLEN+5#:\\"user/*\\";', 's:3:\\"uid\";s:#NUMLEN#:\\"*\\";'),
     'tables' => array(
+      'content_node_field_instance' => array('widget_settings'),
+      'menu_links' => array('link_path', 'router_path'),
+      'menu_router' => array('path', 'tab_parent', 'tab_root'),
       'url_alias' => array('src'),
+      'variable' => array('value'),
     ),
   ),
 );

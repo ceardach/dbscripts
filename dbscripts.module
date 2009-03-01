@@ -1114,6 +1114,7 @@ function dbscripts_find_possible_table_references($table, $branch, $filter_optio
       $tables_ignored = array_merge($tables_filtered, $tables_filtered_l1);
       break;
 
+
     default:
       $tables_ignored = array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2);
       break;
@@ -1240,6 +1241,7 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
           $wildcard = FALSE;
           if (isset($config_references[$check])) {
             foreach ($config_references[$check] as $column) {
+
               if (strpos($column, '*') !== FALSE) {
               	$wildcard = TRUE;
               }
@@ -1406,15 +1408,68 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
   // If there is a system paths reference, also add the pairs
   $pattern_pair_old = array();
   $pattern_pair_new = array();
+  $fuzzy_pattern_pair_old = array();
+  $fuzzy_pattern_pair_new = array();
   if (isset($system_paths[$table])) {
-    $i = 0;
-    foreach ($system_paths[$table]['patterns'] as $key => $pattern) {
-      foreach ($increment_pairs as $old_increment => $new_increment) {
-        $pattern_pair_old[$i] = str_replace('*', $old_increment, $pattern);
-        $pattern_pair_new[$i] = str_replace('*', $new_increment, $pattern);
-        $i++;
+
+    // Exact patterns
+    if (array_key_exists('patterns', $system_paths[$table])) {
+      $i = 0;
+      foreach ($system_paths[$table]['patterns'] as $key => $pattern) {
+        foreach ($increment_pairs as $old_increment => $new_increment) {
+          $pattern_pair_old[$i] = str_replace('*', $old_increment, $pattern);
+          $pattern_pair_new[$i] = str_replace('*', $new_increment, $pattern);
+          $i++;
+        }
       }
     }
+
+    // Fuzzy patterns
+    if (array_key_exists('fuzzy', $system_paths[$table])) {
+      $i = 0;
+      foreach($system_paths[$table]['fuzzy'] as $key => $pattern) {
+
+        $pattern_parts = explode('#', $pattern);
+        $strlen_pattern = FALSE;
+        foreach ($pattern_parts as $part) {
+          if (strstr($part, 'NUMLEN+')) {
+            $strlen_pattern = $part;
+          }
+        }
+        $strlen = isset($strlen_pattern) ? str_replace('NUMLEN+', '', $strlen_pattern) : FALSE;
+
+        $pattern = str_replace(array('"', '\\'), array('#DQ#', '#BS#'), $pattern);
+        //$pattern = str_replace('\\', '#BS', $pattern);
+
+        foreach ($increment_pairs as $old_increment => $new_increment) {
+          $search = array();
+          $replace_old = array();
+          $replace_new = array();
+
+          $idlen_old = strlen($old_increment);
+          $idlen_new = strlen($new_increment);
+
+          $search[] = '*';
+          $replace_old[] = $old_increment;
+          $replace_new[] = $new_increment;
+
+          $search[] = "#NUMLEN#";
+          $replace_old[] = $idlen_old;
+          $replace_new[] = $idlen_new;
+
+          if ($strlen) {
+            $search[] = "#".$strlen_pattern."#";
+            $replace_old[] = $strlen + $idlen_old;
+            $replace_new[] = $strlen + $idlen_new;
+          }
+
+          $fuzzy_pattern_pair_old[$i] = str_replace($search, $replace_old, $pattern);
+          $fuzzy_pattern_pair_new[$i] = str_replace($search, $replace_new, $pattern);
+          $i++;
+        }
+      }
+    }
+
   }
 
   // Write these increment and pattern pairs to a file for awk to use
@@ -1423,11 +1478,21 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
   foreach ($increment_pairs as $increment => $target) {
     exec("echo 'increment_pairs[$increment] = $target' >> $temp_location/increment_pairs.awk");
   }
-  foreach ($pattern_pair_old as $key => $pattern) {
-    exec("echo \"pattern_pair_old[$key] = \\\"'$pattern'\\\"\" >> $temp_location/increment_pairs.awk");
+  if (array_key_exists('0', $pattern_pair_old)) {
+    foreach ($pattern_pair_old as $key => $pattern) {
+      exec("echo \"pattern_pair_old[$key] = \\\"'$pattern'\\\"\" >> $temp_location/increment_pairs.awk");
+    }
+    foreach ($pattern_pair_new as $key => $pattern) {
+      exec("echo \"pattern_pair_new[$key] = \\\"'$pattern'\\\"\" >> $temp_location/increment_pairs.awk");
+    }
   }
-  foreach ($pattern_pair_new as $key => $pattern) {
-    exec("echo \"pattern_pair_new[$key] = \\\"'$pattern'\\\"\" >> $temp_location/increment_pairs.awk");
+  if (array_key_exists('0', $fuzzy_pattern_pair_old)) {
+    foreach ($fuzzy_pattern_pair_old as $key => $pattern) {
+      exec("echo \"fuzzy_pattern_pair_old[$key] = \\\"$pattern\\\"\" >> $temp_location/increment_pairs.awk");
+    }
+    foreach ($fuzzy_pattern_pair_new as $key => $pattern) {
+      exec("echo \"fuzzy_pattern_pair_new[$key] = \\\"$pattern\\\"\" >> $temp_location/increment_pairs.awk");
+    }
   }
   exec("echo '}' >> $temp_location/increment_pairs.awk");
 
@@ -1485,7 +1550,7 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
         exec("
             grep 'INSERT INTO' $branch_location/data/$file_name.sql \\
             |sed -e 's/^INSERT INTO `$table_to_modify` VALUES (//g' -e 's/);$//g' \\
-            |sed -e 's/#/#PND#/g' -e \"s/\\\\\'/#SQ#/g\" -e 's/\"/#DQ#/g' \\
+            |sed -e 's/#/#PND#/g' -e \"s/\\\\\'/#SQ#/g\" -e 's/\"/#DQ#/g' -e \"s/\\\\\/#BS#/g\" \\
             > $temp_location/$file_name.csv
         ");
       }
@@ -1568,7 +1633,7 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
         // Apply the new data after the top sql comments, converting the csv to sql along the way
         exec("
           sed -e 's/^/INSERT INTO `$table_to_modify` VALUES (/g' -e 's/$/);/g' \\
-          -e 's/#DQ#/\"/g' -e \"s/#SQ#/\\\\\'/g\" -e 's/#PND#/#/g' \\
+          -e \"s/#BS#/\\\\\/g\" -e 's/#DQ#/\"/g' -e \"s/#SQ#/\\\\\'/g\" -e 's/#PND#/#/g' \\
           $temp_location/$file_name.csv >> $temp_location/$file_name.sql
         ");
 

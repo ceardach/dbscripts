@@ -7,12 +7,12 @@
     $options = $_SERVER['argv'];
 
     if (isset($options[1]) && $options[1] != 'all') {
-      if (isset($options[4])) {
+      if (isset($options[3])) {
         $table = $options[1];
-        $start_at = $options[3];
-        $change_to = $options[4];
-        $branch = $options[5];
-        $filter_option = $options[6];
+        $start_at = $options[2];
+        $change_to = $options[3];
+        $branch = isset($options[5]) ? $options[5] : 'development';
+        $filter_option = isset($options[6]) ? $options[6] : 'full';
 
         print dbscripts_raise_table_increments($table, $start_at, $change_to, $branch, $filter_option);
       } else {
