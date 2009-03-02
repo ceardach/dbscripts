@@ -1,5 +1,0 @@
-After performing a database merge, follow these instructions on both the development database:
-
- * There are no post merge tasks for this release
-
-Once complete, perform another database merge.
