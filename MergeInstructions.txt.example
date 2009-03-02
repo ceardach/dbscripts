@@ -1,5 +1,26 @@
-After performing a database merge, follow these instructions on both the development database:
+Use this instructions template to create a list of tasks to perform before and
+after the merge.  Useful for recording methods to resolve conflicts.  The
+"default" instructions listed only have to be executed if there have been any
+schema changes to tables classified as "content".
 
- * There are no post merge tasks for this release
 
-Once complete, perform another database merge.
+
+PRE-MERGE
+
+Perform the following actions on the last-merge and production databases:
+
+  * (default) run update.php
+  * (default) import the following CCK content types:
+    * List which content types were updated
+
+
+
+POST-MERGE
+
+After the merge, perform the following instructions on the development database:
+
+  * There are no post merge tasks for this release
+
+
+Once complete, perform another database merge.  The database should then be 
+ready for deployment.
