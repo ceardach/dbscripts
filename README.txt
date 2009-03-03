@@ -51,6 +51,23 @@ Use 'help' for detailed information on each script,
 
 HOW TO START
 
+Convert your CCK fields
+
+    Prevent CCK fields from unnecessarily changing the content type's table 
+    schema by forcing all fields to use their own table.  Create a dummy 
+    content type (perhaps called field_holder) that will be used for no other 
+    purpose, and set permissions on that content type so no one can create any 
+    nodes of that type.  Then, add every field to that content type as an 
+    'existing field'.  
+    
+    Whenever you add a new field, also add that field to this dummy content 
+    type.  This will force all fields to store their data in their own table, 
+    and allow you to create and delete fields during development and merge 
+    those changes with production  much easier.
+    
+    The fields in core for Drupal 7 will be storing their data in individual 
+    tables.
+
 New Development
 
     When  you start a new website, you may solely dump to development and don't 
@@ -58,34 +75,21 @@ New Development
     dbscripts files, performing a dump (the commands outlined above) will 
     successfully create a dump folder for you in the databases directory.
     
+    As you develop, remember to copy all newly created CCK fields to the dummy 
+    content type as outlined above.
+       
     When you are ready to deploy a production version of the website, dump the 
     database for both last-merge and production.  On the production server, 
     restore the production version. 
 
 Existing Site in Production
 
-    Create a clone of the production site.  Install dbscripts on the clone, and 
+    Create a clone of the production site. On this clone, modify all of your 
+    CCK fields to force them to all use their own table.  Follow the 
+    instructions outlined above.  After installing dbscripts on the clone, and 
     dump the database three times: once for development, last-merge and 
     production.  Deploy the file changes that installed dbscripts to the 
     production site, and dump the production database as production.  
-
-Decide CCK Handling
-
-    If you are using CCK (as everyone does), chose one of the following two 
-    methods handle the schema changes it makes:
-      - Export/Import Method
-          - Apply the patch for content_copy to allow modifying existing fields
-          - Within your Drupal website, enable the content_copy module and 
-            export all of your content types.  Save the export data in files 
-            during development (such as within ./databases/content_types)
-      - Table-per field method
-          - If you have existing CCK fields, edit all of them to have 
-            'multiple values', then disable that option.  It will force each 
-            field to use it's own table.
-          - Whenever creating a new field, first set it to have 'multiple 
-            values' enabled, then disable it
-      
-    The Fields in Core for Drupal 7 will use a table per field by default.
 
 Tips  
 
@@ -132,11 +136,12 @@ This script assumes the production database will only track content and users.
 Other changes made and stored in the production database will be lost.  
 Additionally, user data is not preserved in development after a merge.
 
-Manually, the developer will first bring the merged and production databases to 
-have the same structure as the development database (for the data we're 
-concerned with, anyways) by loading each database into MySQL, accessing the 
-site through a web browser, running update.php and importing the content types 
-in ./databases/content_types.  
+If any updated module created a schema change to content or user tables, then 
+you must bring the last-merge and production to have the same structures as the 
+development database, by loading each database into MySQL, accessing the site 
+through a web browser, running update.php, and then dumping the database.  If 
+there were no changes made to content or user tables, then you may proceed 
+directly with the merge.
 
 NOTE: To ensure there is no conflict between development database and 
       production database, the table structures must be the same for all three 
@@ -149,30 +154,28 @@ NOTE: To ensure there is no conflict between development database and
     2.  Restore the last-merge database: 
           ./dbscripts/restore.php last-merge min
 
-    3.  Run update.php as needed
+    3.  Run update.php
 
-    4.  Import content_type data as needed
-
-    5.  Dump database: 
+    4.  Dump database: 
           ./dbscripts/dump.php last-merge
 
-    6.  Restore the production database: 
+    5.  Restore the production database: 
           ./dbscripts/restore.php production min
 
-    7.  Repeat steps 3 & 4 for the production database
+    6.  Run update.php
 
-    8.  Dump database:
+    7.  Dump database:
           ./dbscripts/dump.php production min
 
-    9.  Run the merge script:
+    8.  Run the merge script:
           ./dbscripts/merge.php
 
-    10. Restore a database (preferably production):
+    9. Restore a database (preferably production):
           ./dbscripts/restore.php production none
 
-    11. Test, test, test, then test some more
+    10. Test, test, test, then test some more
 
-    12. Commit to your version control system
+    11. Commit to your version control system
     
 
 WARNING:  When merging development and production databases, the development 
@@ -197,11 +200,15 @@ conflicts manually.  The most frequent causes of conflicts are:
 
   * Upgrading the schema incorrectly.  If there are A LOT of conflicts, it's 
     probably a schema issue.  Ensure that you performed the schema synching 
-    correctly and that each column is in the correct order.
+    process correctly.
 
   * I have fixed the problem where the users table would conflict frequently 
     due to the timestamp constantly changing.  When dumping as development, the 
     users timestamps will be reverted back to the last-merge version.
+    
+  * I have fixed the problem where the auto_increment values of filtered tables 
+    would conflict frequently.  Filtered tables no longer record their 
+    auto_increment value.
 
 Perform test merges frequently so you'll be kept informed of any issues as they 
 come up.  
