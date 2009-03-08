@@ -4,7 +4,7 @@
   if (in_array('help', $_SERVER['argv'])) {
     print dbscripts_help('erase');
   } else {
-    $options = dbscripts_get_options($_SERVER['argv']);
-    print dbscripts_erase($options['filter']);
+    $_SERVER['argv'][1] = isset($_SERVER['argv'][1]) ? $_SERVER['argv'][1] : 'full';
+    print dbscripts_erase($_SERVER['argv'][1]);
   }
 ?>
