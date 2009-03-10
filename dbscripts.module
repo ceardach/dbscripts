@@ -9,21 +9,19 @@ function dbscripts_db_connect() {
 
   // Ensure required files are loaded
   if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
-  if (!isset($db_url)) return "The file 'settings.php' file does not exist.";
+  if (!isset($databases)) return "The file 'settings.php' file does not exist.";
 
-  preg_match('/'.$dbtype.':\/\/([^:]+):([^@]+)@([^\/]+)\/(.+)/', $db_url, $db_settings);
+  $dbuser = $databases['default']['default']['username'];
+  $dbpassword = $databases['default']['default']['password'];
+  $dbhost = $databases['default']['default']['host'];
+  $dbname = $databases['default']['default']['database'];
 
-  if (empty($db_settings)) {
-    return FALSE;
-  } else {
-
-    $dbuser = $db_settings[1];
-    $dbpassword = $db_settings[2];
-    $dbhost = $db_settings[3];
-    $dbname = $db_settings[4];
-
+  if (isset($dbuser) && isset($dbpassword) && isset($dbhost) && isset($dbname)) {
     return "-u $dbuser -p$dbpassword -h $dbhost $dbname";
+  } else {
+    return FALSE;
   }
+
 }
 
 
