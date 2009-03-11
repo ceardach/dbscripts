@@ -58,8 +58,10 @@ function dbscripts_get_options($argv) {
   $options['branch'] = $use_default_branch ? 'development' : $argv[1];
   $options['last-merge'] = $use_default_lastmerge ? 'last-merge' : $argv[2];
 
-  if(in_array($argv[3],array('min','none','full'))) {
-    $filter_options = $argv[3];
+  if(isset($argv[3])) {
+    if(in_array($argv[3],array('min','none','full'))) {
+      $filter_options = $argv[3];
+    }
   }
 
   switch ($filter_options) {
