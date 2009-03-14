@@ -12,7 +12,7 @@
 $script_path = './dbscripts';
 
 // Location of settings.php
-$settings_path = './sites/default';
+$settings_path = './sites/default/settings.php';
 
 // Location where database dump files will be stored
 $dump_path = './databases';
