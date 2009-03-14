@@ -5,7 +5,7 @@
  */
 function dbscripts_db_connect() {
   require('config.inc');
-  require("$settings_path/settings.php");
+  require("$settings_path");
 
   // Ensure required files are loaded
   if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
