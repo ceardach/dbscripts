@@ -391,8 +391,13 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
 
   // For now we're just going to directly copy everything to $dump_location
   // Eventually we'll actually perform a merge
-  exec("rm -r $dump_location/*");
-  exec("cp -R $workspace_location/* $dump_location");
+  // Erasing directory without erasing folders for svn support
+  exec("rm $dump_location/table_list.txt");
+  exec("rm $dump_location/tables/*");
+  exec("rm $dump_location/data/*");
+  exec("cp $workspace_location/table_list.txt $dump_location");
+  exec("cp $workspace_location/tables/* $dump_location/tables");
+  exec("cp $workspace_location/data/* $dump_location/data");
 
 
   // Let the user know what happened
@@ -679,7 +684,10 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
 
     // Creating merge folders
     if (!file_exists($merge_location)) exec("mkdir -p $merge_location/tables $merge_location/data");
-    exec("cp -R $dev_location $tmpdev_location");
+    exec("cp -R $merge_location $tmpdev_location");
+    exec("cp $dev_location/table_list.txt $tmpdev_location");
+    exec("cp $dev_location/tables/* $tmpdev_location/tables");
+    exec("cp $dev_location/data/* $tmpdev_location/data");
 
     // Define the tables, fail if they don't return arrays
     $tables_content = dbscripts_process_tables($dev_branch, $tables_merge, FALSE);
@@ -821,7 +829,7 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
     if (isset($conflict[0])) {
       print "\nDON'T PANIC! But, I'm afraid I have to inform you that the following tables\nfailed to merge:\n\n";
       print_r($conflict);
-      print "\nPlease correct the conflicts in '$merge_location' (look for '<<<<<<<').\n";
+      print "\nPlease correct the conflicts in '$merge_location/data' (look for '<<<<<<<').\n";
       print "Afterwards, run '$script_path/merge.php continue' to finish the merge.\n\n";
       return;
     }
@@ -831,11 +839,28 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
   // MERGE COMPLETE
 
   // Copy this new merged version to all three branches
-  exec("rm -r $dev_location $lastmerge_location $prod_location");
+
+  // Deleting originals, while preserving original directories for svn support
+  exec("rm $dev_location/table_list.txt $lastmerge_location/table_list.txt $prod_location/table_list.txt");
+  exec("rm $dev_location/tables/* $lastmerge_location/tables/* $prod_location/tables/*");
+  exec("rm $dev_location/data/* $lastmerge_location/data/* $prod_location/data/*");
+
   exec("cp $tmpdev_location/table_list.txt $merge_location");
-  exec("cp -R $merge_location $dev_location");
-  exec("cp -R $merge_location $lastmerge_location");
-  exec("cp -R $merge_location $prod_location");
+
+  // Copy new merge to development
+  exec("cp $merge_location/table_list.txt $dev_location");
+  exec("cp $merge_location/tables/* $dev_location/tables");
+  exec("cp $merge_location/data/* $dev_location/data");
+
+  // Copy new merge to last-merge
+  exec("cp $merge_location/table_list.txt $lastmerge_location");
+  exec("cp $merge_location/tables/* $lastmerge_location/tables");
+  exec("cp $merge_location/data/* $lastmerge_location/data");
+
+  // Copy new merge to production
+  exec("cp $merge_location/table_list.txt $prod_location");
+  exec("cp $merge_location/tables/* $prod_location/tables");
+  exec("cp $merge_location/data/* $prod_location/data");
 
   // Dev and last-merge do not need to be bothered with all the data
   $tables_cleared = dbscripts_process_tables($tmpdev_branch, array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2), FALSE);
