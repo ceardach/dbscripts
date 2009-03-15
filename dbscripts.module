@@ -540,8 +540,12 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
   }
 
   // Move what was restored to the working space
+  // Careful to preserve directories for SVN support
   if (exec("ls $workspace_location")) {exec("rm -r $workspace_location/*");}
-  exec("cp -R $dump_location/* $workspace_location");
+  exec("mkdir $workspace_location/tables $workspace_location/data");
+  exec("cp $dump_location/table_list.txt $workspace_location");
+  exec("cp $dump_location/data/* $workspace_location/data");
+  exec("cp $dump_location/tables/* $workspace_location/tables");
 
   return "\n$message\n\n";
 }
