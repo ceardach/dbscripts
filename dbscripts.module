@@ -514,12 +514,12 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
       break;
 
     case 'min':
-      $tables_preserved = array_merge($tables_filtered, $tables_filtered_l1);
+      $tables_preserved = array_merge($tables_filtered_l1);
       $message = "Restored the database perserving minimal tables";
       break;
 
     default:
-      $tables_preserved = array_merge($tables_filtered, $tables_filtered_l1,$tables_filtered_l2);
+      $tables_preserved = array_merge($tables_filtered_l1,$tables_filtered_l2);
       $message = "Restored the database preserving the full option of tables";
       break;
   }
@@ -541,7 +541,7 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
     if (file_exists("$dump_location/data/$table-new.sql")) exec("$mysql $db_connection_settings < $dump_location/data/$table-new.sql");
   }
 
-  // Move what was restored to the working space
+  // Copy what was restored to the working space
   // Careful to preserve directories for SVN support
   if (exec("ls $workspace_location")) {exec("rm -r $workspace_location/*");}
   exec("mkdir $workspace_location/tables $workspace_location/data");
