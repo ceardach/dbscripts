@@ -190,22 +190,27 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
       // Get the current and lastmerge increments of the table
       $increment = dbscripts_get_table_increment($table, $workspace_branch);
       $increment_lastmerge = dbscripts_get_table_increment($table, $lastmerge_branch);
+      if (is_numeric($increment['num']) && !is_numeric($increment_lastmerge['num'])) {
+        $increment_lastmerge['num'] = '0';
+      }
 
       // Continue only if there is a possibility of new data or a reference
-      if (isset($increment['num']) && isset ($increment_lastmerge['num']) && $increment['num'] > $increment_lastmerge['num']) {
+      if (isset($increment['num']) && isset($increment_lastmerge['num']) && $increment['num'] > $increment_lastmerge['num']) {
 
         // Not error checking when finding references because it takes too long
         $references = dbscripts_get_table_references($table, $workspace_branch, $filter_option, FALSE);
 
         // Compare the primary keys of the referencing table with
         // the foreign keys of the referenced table
-        foreach ($references['references'] as $referenced_table => $columns) {
-          $primary_keys = dbscripts_get_table_primary_keys($referenced_table, $branch);
-          if (is_array($primary_keys)) {
-            foreach ($columns as $column) {
-              if (in_array($column, $primary_keys)) {
-                // Record the table/column pair along with the lastmerge increment value
-                $tables_with_new_data[$referenced_table][$column] = $increment_lastmerge['num'];
+        if (is_array($references['references'])) {
+          foreach ($references['references'] as $referenced_table => $columns) {
+            $primary_keys = dbscripts_get_table_primary_keys($referenced_table, $branch);
+            if (is_array($primary_keys)) {
+              foreach ($columns as $column) {
+                if (in_array($column, $primary_keys)) {
+                  // Record the table/column pair along with the lastmerge increment value
+                  $tables_with_new_data[$referenced_table][$column] = $increment_lastmerge['num'];
+                }
               }
             }
           }
