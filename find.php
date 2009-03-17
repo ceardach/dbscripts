@@ -69,7 +69,10 @@
               $table_references = dbscripts_get_table_references($table, 'development');
               if (isset($table_references['found'])) $references[$table] = $table_references['found'];
             } else {
-              $references[$table] = dbscripts_get_table_references($table, 'development');
+              $table_references = dbscripts_get_table_references($table, 'development');
+              if (is_array($table_references)) {
+                $references[$table] = $table_references;
+              }
             }
           }
           if (isset($references)) {

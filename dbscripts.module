@@ -1230,7 +1230,9 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
     return $increment;
   }
 
-  if (!in_array($table, $tables_standalone) && isset($increment)) {
+  $table_can_be_referenced = FALSE;
+  if (!in_array($table, $tables_standalone) && isset($increment['id'])) {
+    $table_can_be_referenced = TRUE;
 
     $config_references = isset($tables_referenced[$table]['references']) ? $tables_referenced[$table]['references'] : array();
     $config_false_positive = isset($tables_referenced[$table]['false positives']) ? $tables_referenced[$table]['false positives'] : array();
@@ -1350,9 +1352,15 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
   }
 
   // Add itself as a reference
-  $references['references'][$table][] = $increment['id'];
+  if ($table_can_be_referenced) {
+    $references['references'][$table][] = $increment['id'];
+  }
 
-  return $references;
+  if (isset($references)) {
+    return $references;
+  } else {
+    return;
+  }
 }
 
 
