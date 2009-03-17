@@ -116,8 +116,6 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
   if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
   if (!file_exists("$dump_location/data")) exec("mkdir -p $dump_location/data");
   if (!file_exists("$dump_location/tables")) exec("mkdir -p $dump_location/tables");
-  if (!file_exists("$workspace_location/tables")) exec("mkdir -p $workspace_location/tables");
-  if (!file_exists("$workspace_location/data")) exec("mkdir -p $workspace_location/data");
 
   $lastmerge_exists = FALSE;
   if (file_exists("$lastmerge_location") && file_exists("$dump_location/table_list.txt")) {
@@ -147,15 +145,15 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
   }
 
   // Create an array of all tables in the database and store it
-  exec("$mysqldump --add-drop-table --no-data $db_connection_settings | grep 'DROP TABLE' | sed -e \"s/DROP TABLE IF EXISTS .//g\" -e \"s/.;//g\" > $workspace_location/table_list.txt");
-  $table_list = file("$workspace_location/table_list.txt", FILE_IGNORE_NEW_LINES);
+  if (exec("ls $temp_location")) exec("rm -r $temp_location/*");
+  exec("$mysqldump --add-drop-table --no-data $db_connection_settings | grep 'DROP TABLE' | sed -e \"s/DROP TABLE IF EXISTS .//g\" -e \"s/.;//g\" > $temp_location/table_list.txt");
+  $table_list = file("$temp_location/table_list.txt", FILE_IGNORE_NEW_LINES);
 
   // These are all the special dump options that make the database diffable
   // and preserve character set
   $dump_options = "--skip-opt --add-drop-table --add-locks --create-options --quick --lock-tables --set-charset --disable-keys --order-by-primary --skip-comments --comments=FALSE --default-character-set=utf8 --character-sets-dir=$charsets --hex-blob";
 
   // Dump the structure of all tables
-  if (exec("ls $temp_location")) exec("rm -r $temp_location/*");
   foreach ($table_list as $table) {
   	exec("$mysqldump $dump_options --no-data $db_connection_settings --tables $table > $temp_location/$table.sql");
   }
@@ -167,7 +165,10 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
   }
 
   // Move the table files to the working space's last dump
-  if (exec("ls $workspace_location/tables")) exec("rm $workspace_location/tables/*");
+  if (file_exists("$workspace_location")) exec("rm -rf $workspace_location");
+  exec("mkdir -p $workspace_location/tables");
+  exec("mkdir -p $workspace_location/data");
+  exec("mv $temp_location/table_list.txt $workspace_location");
   exec("mv $temp_location/* $workspace_location/tables");
 
   // Remove all AUTO_INCREMENT values of the filtered tables
@@ -276,7 +277,6 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
   }
 
   // Move the data files to the working space's last dump
-  if (exec("ls $workspace_location/data")) exec("rm $workspace_location/data/*");
   exec("mv $temp_location/* $workspace_location/data");
 
   // Fix the users table issue with conflicting timestamps
