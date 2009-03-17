@@ -1256,18 +1256,17 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
 
       // Check all possible values for the table name
       foreach ($possible_table_names as $check) {
-        if ($check && (isset($config_references[$check]) || isset($config_false_positive[$check]))) {
+        if ($check && (array_key_exists($check, $config_references) || array_key_exists($check, $config_false_positive))) {
           // Check to see if any of the configured column names for that table have a wildcard
           $wildcard = FALSE;
-          if (isset($config_references[$check])) {
+          if (is_array($config_references) && array_key_exists($check, $config_references) && is_array($config_references[$check])) {
             foreach ($config_references[$check] as $column) {
-
               if (strpos($column, '*') !== FALSE) {
               	$wildcard = TRUE;
               }
             }
           }
-          if (isset($config_false_positive[$check])) {
+          if (is_array($config_false_positive) && array_key_exists($check, $config_false_positive) && is_array($config_false_positive[$check])) {
             foreach ($config_false_positive[$check] as $column) {
               if (strpos($column, '*') !== FALSE) {
                 $wildcard = TRUE;
@@ -1333,8 +1332,14 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
           foreach ($check_ids as $check_id) {
 
             // Check to see if the possible reference is in the references list as found above
-            $check_references = isset($references['references'][$check_table]) ? in_array($check_id, $references['references'][$check_table]) : FALSE;
-            $check_false_positive = isset($references['false positives'][$check_table]) ? in_array($check_id, $references['false positives'][$check_table]) : FALSE;
+            $check_references = FALSE;
+            if (array_key_exists('references', $references) && array_key_exists($check_table, $references['references']) && is_array($references['references'][$check_table])) {
+              $check_references = in_array($check_id, $references['references'][$check_table]);
+            }
+            $check_false_positive = FALSE;
+            if (array_key_exists('false positives', $references) && array_key_exists($check_table, $references['false positives']) && is_array($references['false positives'][$check_table])) {
+              $check_false_positive = in_array($check_id, $references['false positives'][$check_table]);
+            }
 
             // If it is not in either, then record it under 'found'
             if(!$check_references && !$check_false_positive) {
