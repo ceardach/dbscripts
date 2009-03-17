@@ -95,8 +95,12 @@ $tables_filtered_l2 =  array(
   'search_index',
   'search_node_links',
   'search_total',
+  'user_import',
+  'user_import_errors',
+  'user_import_extra',
   'votingapi_vote',
   'watchdog',
+  'workflow_scheduled_transition',
 );
 
 
@@ -155,9 +159,6 @@ $tables_merge = array(
   'term_synonym',
   'upload',
   'url_alias',
-  'user_import',
-  'user_import_errors',
-  'user_import_extra',
   'users',
   'users_roles',
   'vocabulary',
@@ -194,6 +195,9 @@ $tables_override = array(
   'search_node_links',
   'search_total',
   'sessions',
+  'user_import',
+  'user_import_errors',
+  'user_import_extra',
   'votingapi_vote',
   'watchdog',
   'workflow_scheduled_transition',
