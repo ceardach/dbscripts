@@ -392,9 +392,8 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
   // For now we're just going to directly copy everything to $dump_location
   // Eventually we'll actually perform a merge
   // Erasing directory without erasing folders for svn support
-  exec("rm $dump_location/table_list.txt");
-  exec("rm $dump_location/tables/*");
-  exec("rm $dump_location/data/*");
+  if (!file_exists("$dump_location/tables"))exec("rm $dump_location/tables/*");
+  if (!file_exists("$dump_location/data"))exec("rm $dump_location/data/*");
   exec("cp $workspace_location/table_list.txt $dump_location");
   exec("cp $workspace_location/tables/* $dump_location/tables");
   exec("cp $workspace_location/data/* $dump_location/data");
