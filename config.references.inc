@@ -305,14 +305,6 @@ $tables_referenced = array(
     ),
   ),
 
-  'user_import' => array(
-    'references' => array(
-      'user_import_errors' => array('import_id'),
-    ),
-    'false positives' => array(
-    ),
-  ),
-
   'users' => array(
     'references' => array(
       'authmap' => array('uid'),
