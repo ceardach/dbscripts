@@ -14,12 +14,15 @@ $tables_standalone = array(
   'advanced_help_index',
   'authmap',
   'batch',
+  'blogapi_files', // this should not have auto_increment on fid, since it is files.fid (or at least should be)
   'boxes',
   'contact',
   'filters', // references are to filter_formats.format
   'permission',
   'url_alias',
-  'blogapi_files', // this should not have auto_increment on fid, since it is files.fid (or at least should be)
+  'workflow_access', // shouldn't have auto_increment on sid
+  'workflow_node_history',
+  'workflow_transitions',
 );
 
 
@@ -51,7 +54,10 @@ $tables_referenced = array(
     'references' => array(
       'aggregator_category_feed' => array('cid'),
     ),
-    'false positives' => array (
+    'false positives' => array(
+      'biblio_collection' => array('cid'),
+      'biblio_collection_type' => array('cid'),
+      'biblio_contributor' => array('cid'),
       'webform_component' => array('cid'),
       'webform_submitted_data' => array('cid',),
     ),
@@ -61,12 +67,42 @@ $tables_referenced = array(
     'references' => array(
       'aggregator_category_feed' => array('fid'),
     ),
-    'false positives' => array (
+    'false positives' => array(
+      'biblio_field_type' => array('fid'),
+      'biblio_fields' => array('fid'),
       'content_field_.*' => array('field_*_fid'),
       'content_type_.*' => array('field_*_fid'),
       'image' => array('fid'),
       'profile_values' => array('fid'),
       'upload' => array('fid'),
+    ),
+  ),
+
+  'biblio_contributor_data' => array(
+    'references' => array(
+      'biblio_contributor' => array('cid'),
+    ),
+    'false positives' => array(
+      'aggregator_category_feed' => array('cid'),
+      'biblio_collection' => array('cid'),
+      'biblio_collection_type' => array('cid'),
+    ),
+  ),
+
+  'biblio_contributor_type_data' => array(
+    'references' => array(
+      'biblio_contributor' => array('auth_type'),
+      'biblio_contributor_type' => array('auth_type'),
+    ),
+    'false positives' => array(
+    ),
+  ),
+
+  'biblio_keyword_data' => array(
+    'references' => array(
+      'biblio_keyword' => array('kid'),
+    ),
+    'false positives' => array(
     ),
   ),
 
@@ -77,8 +113,20 @@ $tables_referenced = array(
       // It shouldn't have auto_increment, though...
       'boxes' => array('bid'),
     ),
-    'false positives' => array (
+    'false positives' => array(
       'book' => array('bid'),
+    ),
+  ),
+
+  'comments' => array(
+    'references' => array(
+    ),
+    'false positives' => array(
+      'aggregator_category_feed' => array('cid'),
+      'biblio_collection' => array('cid'),
+      'biblio_collection_type' => array('cid'),
+      'biblio_contributor' => array('cid'),
+      'aggregator_contributor' => array('cid'),
     ),
   ),
 
@@ -89,9 +137,11 @@ $tables_referenced = array(
       'image' => array('fid'),
       'upload' => array('fid'),
     ),
-    'false positives' => array (
+    'false positives' => array(
       'aggregator_category_feed' => array('fid'),
       'profile_values' => array('fid'),
+      'biblio_field_type' => array('fid'),
+      'biblio_fields' => array('fid'),
     ),
   ),
 
@@ -99,13 +149,14 @@ $tables_referenced = array(
     'references' => array(
       'better_formats_defaults' => array('format'),
       'boxes' => array('format'),
+      'comments' => array('format'),
       'content_field_.*' => array('field_*_format'),
       'content_type_.*' => array('field_*_format'),
       'filters' => array('format'),
       'node_revisions' => array('format'),
       'wysiwyg' => array('format'),
     ),
-    'false positives' => array (
+    'false positives' => array(
     ),
   ),
 
@@ -113,7 +164,7 @@ $tables_referenced = array(
     'references' => array(
       'imagecache_action' => array('presetid'),
     ),
-    'false positives' => array (
+    'false positives' => array(
     ),
   ),
 
@@ -121,7 +172,7 @@ $tables_referenced = array(
     'references' => array(
       'locales_target' => array('lid', 'plid'),
     ),
-    'false positives' => array (
+    'false positives' => array(
       'book' => array('mlid'),
       'menu_links' => array('plid' ),
       'webform' => array('additional_validate' ),
@@ -133,22 +184,35 @@ $tables_referenced = array(
       'book' => array('mlid'),
       'menu_links' => array('plid'),
     ),
-    'false positives' => array (
+    'false positives' => array(
     ),
   ),
 
   'node' => array(
     'references' => array(
+      'biblio' => array('nid'),
+      'biblio_collection' => array('nid'),
+      'biblio_contributor' => array('nid'),
+      'biblio_keyword' => array('nid'),
+      'biblioreference_title_keyword' => array('nid'),
       'book' => array('nid'),
       'comments' => array('nid'),
       'content_field_.*' => array('nid', 'field_*_nid'),
       'content_type_.*' => array('nid', 'field_*_nid'),
+      'feedapi' => array('nid'),
+      'feedapi_node_item' => array('nid'),
+      'feedapi_node_item_feed' => array('feed_nid', 'feed_item_nid'),
       'forum' => array('nid'),
       'image' => array('nid'),
       'image_attach' => array('nid'),
       'img_assist_map' => array('nid', 'iid'),
+      'nat' => array('nid'),
       'node_access' => array('nid'),
       'node_revisions' => array('nid'),
+      'og' => array('nid'),
+      'og_ancestry' => array('nid', 'group_nid'),
+      'og_uid' => array('nid'),
+      'pdsolicit' => array('nid'),
       'poll' => array('nid'),
       'poll_choices' => array('nid'),
       'term_node' => array('nid'),
@@ -158,8 +222,11 @@ $tables_referenced = array(
       'webform_roles' => array('nid'),
       'webform_submissions' => array('nid'),
       'webform_submitted_data' => array('nid'),
+      'workflow_node' => array('nid'),
+      'workflow_node_history' => array('nid'),
+      'workflow_scheduled_transition' => array('nid'),
     ),
-    'false positives' => array (
+    'false positives' => array(
       'content_field_.*' => array('field_*_fid', 'field_*_list', 'field_*_data'),
       'content_type_.*' => array('field_*_fid', 'field_*_list', 'field_*_data'),
       'node' => array('tnid'),
@@ -168,17 +235,25 @@ $tables_referenced = array(
 
   'node_revisions' => array(
     'references' => array(
+      'biblio' => array('vid'),
+      'biblio_collection' => array('vid'),
+      'biblio_contributor' => array('vid'),
+      'biblio_duplicates' => array('vid'),
+      'biblio_keyword' => array('vid'),
       'content_field_.*' => array('vid'),
       'content_type_.*' => array('vid'),
       'forum' => array('vid'),
+      'nat' => array('vid'),
       'node' => array('vid'),
       'term_node' => array('vid'),
       'upload' => array('vid'),
     ),
-    'false positives' => array (
-      // I can't think of a case where a field would refer to a revision
+    'false positives' => array(
+      'biblio' => array('biblio_remote_db_provider'),
       'content_field_.*' => array('field_*'),
       'content_type_.*' => array('field_*'),
+      'taxonomy_dhtml' => array('vid'),
+      'taxonomy_tree' => array('vid'),
       'term_data' => array('vid'),
       'views_display' => array('vid'),
       'vocabulary_node_types' => array('vid'),
@@ -189,7 +264,7 @@ $tables_referenced = array(
     'references' => array(
       'profile_values' => array('fid'),
     ),
-    'false positives' => array (
+    'false positives' => array(
       'aggregator_category_feed' => array('fid'),
       // We can safely assume all fid will refer to files.fid and not this table
       'content_field_.*' => array('field_*'),
@@ -197,8 +272,6 @@ $tables_referenced = array(
       'image' => array('fid'),
       'upload' => array('fid'),
     ),
-
-
   ),
 
   'role' => array(
@@ -208,38 +281,64 @@ $tables_referenced = array(
       'permission' => array('rid'),
       'users_roles' => array('rid'),
       'webform_roles' => array('rid'),
+      'workflow_access' => array('rid'),
     ),
-    'false positives' => array (
+    'false positives' => array(
     ),
   ),
 
   'term_data' => array(
     'references' => array(
       'forum' => array('tid'),
+      'nat' => array('tid'),
       'permission' => array('tid'),
+      'taxonomy_manager_merge' => array('main_tid', 'merged_tid'),
       'term_hierarchy' => array('tid'),
       'term_node' => array('tid'),
       'term_relation' => array('tid1', 'tid2'),
       'term_synonym' => array('tid'),
     ),
-    'false positives' => array (
+    'false positives' => array(
+      'biblio_field_type' => array('tid'),
+      'biblio_types' => array('tid'),
       'imagecache_action' => array('presetid'),
+    ),
+  ),
+
+  'user_import' => array(
+    'references' => array(
+      'user_import_errors' => array('import_id'),
+    ),
+    'false positives' => array(
     ),
   ),
 
   'users' => array(
     'references' => array(
       'authmap' => array('uid'),
+      'biblio_contributor_data' => array('drupal_uid'),
       'blogapi_files' => array('uid'),
       'comments' => array('uid'),
+      'content_field_.*' => array('field_*_uid'),
+      'content_type_.*' => array('field_*_uid'),
       'files' => array('uid'),
+      'invite' => array('uid'),
+      'invite_notifications' => array('uid'),
+      'messaging_store' => array('uid'),
       'node' => array('uid'),
       'node_revisions' => array('uid'),
+      'og_uid' => array('uid'),
+      'og_uid_global' => array('uid'),
+      'pdsolicit' => array('uid_sender', 'uid_recipient'),
       'profile_values' => array('uid'),
+      'user_import_extra' => array('uid'),
       'users_roles' => array('uid'),
       'webform_submissions' => array('uid'),
+      'workflow_node' => array('uid'),
+      'workflow_node_history' => array('uid'),
     ),
-    'false positives' => array (
+    'false positives' => array(
+      'feedapi_node_item' => array('guid'),
     ),
   ),
 
@@ -247,27 +346,39 @@ $tables_referenced = array(
     'references' => array(
       'views_display' => array('vid'),
     ),
-    'false positives' => array (
-      // Not filtering field_* because it could want field_*_vid for referencing views
+    'false positives' => array(
+      'biblio' => array('vid', 'biblio_remote_db_provider'),
+      'biblio_collection' => array('vid'),
+      'biblio_contributor' => array('vid'),
+      'biblio_duplicates' => array('vid'),
+      'biblio_keyword' => array('vid'),
       'content_field_.*' => array('vid', 'field_*_nid', 'field_*_fid', 'field_*_list', 'field_*_data'),
       'content_type_.*' => array('vid', 'field_*_nid', 'field_*_fid', 'field_*_list', 'field_*_data'),
       'forum' => array('vid'),
+      'nat' => array('vid'),
       'node' => array('vid'),
+      'taxonomy_dhtml' => array('vid'),
+      'taxonomy_tree' => array('vid'),
       'term_data' => array('vid'),
       'term_node' => array('vid'),
       'upload' => array('vid'),
       'vocabulary_node_types' => array('vid'),
     ),
-
-
   ),
 
   'vocabulary' => array(
     'references' => array(
+      'nat' => array('vid'),
+      'taxonomy_dhtml' => array('vid'),
+      'taxonomy_tree' => array('vid'),
       'vocabulary_node_types' => array('vid'),
     ),
-    'false positives' => array (
-      // Not filtering field_* because it could want field_*_vid for referencing vocabularies
+    'false positives' => array(
+      'biblio' => array('vid', 'biblio_remote_db_provider'),
+      'biblio_collection' => array('vid'),
+      'biblio_contributor' => array('vid'),
+      'biblio_duplicates' => array('vid'),
+      'biblio_keyword' => array('vid'),
       'content_field_.*' => array('vid', 'field_*_nid', 'field_*_fid', 'field_*_list', 'field_*_data'),
       'content_type_.*' => array('vid', 'field_*_nid', 'field_*_fid', 'field_*_list', 'field_*_data'),
       'forum' => array('vid'),
@@ -283,7 +394,31 @@ $tables_referenced = array(
     'references' => array(
       'webform_submitted_data' => array('sid'),
     ),
-    'false positives' => array (
+    'false positives' => array(
+    ),
+  ),
+
+  'workflow_states' => array(
+    'references' => array(
+      'workflow_access' => array('sid'),
+      'workflow_node' => array('sid'),
+      'workflow_node_history' => array('old_sid', 'sid'),
+      'workflow_scheduled_transition' => array('old_sid', 'sid'),
+      'workflow_transitions' => array('sid', 'target_sid'),
+    ),
+    'false positives' => array(
+      'pdsolicit' => array('sid', 'sid_delegated'),
+      'workflow_states' => array('sysid'),
+    ),
+  ),
+
+  'workflows' => array(
+    'references' => array(
+      'workflow_states' => array('wid'),
+      'workflow_type_map' => array('wid'),
+    ),
+    'false positives' => array(
+      'content_node_field_instance' => array('widget_*'),
     ),
   ),
 
