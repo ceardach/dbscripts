@@ -608,7 +608,10 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
   // Ensure tmp folder exists
   if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
 
+  //
   // CONTINUE MERGE
+  //
+
   // If a previous merge had a conflict, it'll be picked up and continued here
   if ($continue) {
 
@@ -685,8 +688,12 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
 
   } else {
 
+    //
+    // NEW MERGE
+    //
+
     // After a conflict, the temp files would still exist, so delete everything and start over
-    if (exec("ls $temp_location")) exec("rm -r $temp_location/*");
+    if (exec("ls $temp_location")) exec("rm -rf $temp_location/*");
 
     // Creating merge folders
     if (!file_exists($merge_location)) exec("mkdir -p $merge_location/tables $merge_location/data");
@@ -733,15 +740,27 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
       print "\n"; // gheto status messages
     }
 
-    // Move all development tables and data to the temp merge location
-    foreach (array_merge($tables_dev, $tables_content) as $table) {
-    	if (file_exists("$tmpdev_location/tables/$table.sql")) exec("cp $tmpdev_location/tables/$table.sql $merge_location/tables");
-      if (file_exists("$tmpdev_location/data/$table.sql")) exec("cp $tmpdev_location/data/$table.sql $merge_location/data");
+    // Move all tables to the temp merge location
+    foreach (array_merge($tables_dev, $tables_content, $tables_prod) as $table) {
+      if (file_exists("$tmpdev_location/tables/$table.sql")) {
+        $dev_increment = dbscripts_get_table_increment($table, $tmpdev_branch);
+        $prod_increment = dbscripts_get_table_increment($table, $prod_branch);
+
+        if ($dev_increment['num'] >= $prod_increment) {
+          exec("cp $tmpdev_location/tables/$table.sql $merge_location/tables");
+        } else {
+          // If the production increment is higher than development, must rewrite increment
+          exec("sed 's/ AUTO_INCREMENT={$dev_increment['num']} / AUTO_INCREMENT={$prod_increment['num']} /g' $tmpdev_location/tables/$table.sql > $temp_location/$table.sql");
+          exec("mv $temp_location/$table.sql $merge_location/tables/$table.sql");
+        }
+      }
     }
 
-    // Move all the production tables and data to the temp merge location
+    // Move the data files to be preserved wholly to the merge location
+    foreach ($tables_dev as $table) {
+      if (file_exists("$tmpdev_location/data/$table.sql")) exec("cp $tmpdev_location/data/$table.sql $merge_location/data");
+    }
     foreach ($tables_prod as $table) {
-      if (file_exists("$prod_location/tables/$table.sql")) exec("cp $prod_location/tables/$table.sql $merge_location/tables");
       if (file_exists("$prod_location/data/$table.sql")) exec("cp $prod_location/data/$table.sql $merge_location/data");
     }
 
