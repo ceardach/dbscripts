@@ -43,9 +43,17 @@ $dbtype = 'mysqli';
  *
  * Set to FALSE to use your own auto_increment handling method.
  */
-
 $raise_increments_on_merge = TRUE;
 
+
+/**
+ * Some versions of MySQL do not set character encoding for column names which
+ * can cause unnessisary changes in the version control system.  If this is
+ * happening amungst your group of developers, you can set this value to TRUE
+ * to avoid the conflicts.  However, it means you cannot have special
+ * characters in your column names.
+ */
+$remove_column_charset = TRUE;
 
 
 /**

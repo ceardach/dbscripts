@@ -153,11 +153,22 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
 
   // These are all the special dump options that make the database diffable
   // and preserve character set
-  $dump_options = "--skip-opt --add-drop-table --add-locks --create-options --quick --lock-tables --set-charset --disable-keys --order-by-primary --skip-comments --comments=FALSE --default-character-set=utf8 --character-sets-dir=$charsets --hex-blob";
+  $dump_options = "--skip-opt --add-drop-table --add-locks --create-options --quick --lock-tables --disable-keys --order-by-primary --skip-comments --comments=FALSE --set-charset --default-character-set=utf8 --character-sets-dir=$charsets --hex-blob";
+
+  // Some versions of MySQL do not set character encoding for column names
+  // which can cause unnessisary changes in the version control system
+  // Enable this in config.inc
+  $charset_filter = '';
+  if ($remove_column_charset) {
+    $charset_filter .= "| sed ";
+    $charset_filter .= "-e '/SET @saved_cs_client     = @@character_set_client;/d' ";
+    $charset_filter .= "-e '/SET character_set_client = utf8;/d' ";
+    $charset_filter .= "-e '/SET character_set_client = @saved_cs_client;/d' ";
+  }
 
   // Dump the structure of all tables
   foreach ($table_list as $table) {
-  	exec("$mysqldump $dump_options --no-data $db_connection_settings --tables $table > $temp_location/tables/$table.sql");
+  	exec("$mysqldump $dump_options --no-data $db_connection_settings --tables $table $charset_filter > $temp_location/tables/$table.sql");
   }
 
   // Check that a file actually has data, and stop if it doesn't
