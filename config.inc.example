@@ -162,6 +162,7 @@ $tables_merge = array(
   'profile_values',
   'poll',
   'poll_choices',
+  'search_block',
   'taxonomy_manager_merge',
   'term_data',
   'term_hierarchy',

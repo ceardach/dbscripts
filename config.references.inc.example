@@ -215,6 +215,7 @@ $tables_referenced = array(
       'pdsolicit' => array('nid'),
       'poll' => array('nid'),
       'poll_choices' => array('nid'),
+      'search_block' => array('nid'),
       'term_node' => array('nid'),
       'upload' => array('nid'),
       'webform' => array('nid'),
