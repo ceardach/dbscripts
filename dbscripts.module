@@ -195,7 +195,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
     foreach ($tables_to_merge as $table) {
 
       // Get the current and lastmerge increments of the table
-      $increment = dbscripts_get_table_increment($table, $workspace_branch);
+      $increment = dbscripts_get_table_increment($table, $temp_branch);
       $increment_lastmerge = dbscripts_get_table_increment($table, $lastmerge_branch);
       if (is_numeric($increment['num']) && !is_numeric($increment_lastmerge['num'])) {
         $increment_lastmerge['num'] = '0';
