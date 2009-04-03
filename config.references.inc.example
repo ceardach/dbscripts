@@ -18,6 +18,7 @@ $tables_standalone = array(
   'boxes',
   'contact',
   'filters', // references are to filter_formats.format
+  'path_redirect',
   'permission',
   'url_alias',
   'workflow_access', // shouldn't have auto_increment on sid
@@ -47,6 +48,7 @@ $tables_referenced = array(
       'trigger_assignments' => array('aid'),
     ),
     'false positives' => array(
+      'flag_actions' => array('aid'),
     ),
   ),
 
@@ -142,6 +144,10 @@ $tables_referenced = array(
       'profile_values' => array('fid'),
       'biblio_field_type' => array('fid'),
       'biblio_fields' => array('fid'),
+      'flag_actions' => array('fid'),
+      'flag_content' => array('fid'),
+      'flag_counts' => array('fid'),
+      'flag_types' => array('fid'),
     ),
   ),
 
@@ -157,6 +163,36 @@ $tables_referenced = array(
       'wysiwyg' => array('format'),
     ),
     'false positives' => array(
+      'date_format' => array('format'),
+      'date_format_locale' => array('format'),
+    ),
+  ),
+
+  'flag_actions' => array(
+    'references' => array(
+    ),
+    'false positives' => array(
+      'actions' => array('aid'),
+      'trigger_assignments' => array('aid'),
+    ),
+  ),
+
+  'flags' => array(
+    'references' => array(
+      'flag_actions' => array('fid'),
+      'flag_content' => array('fid'),
+      'flag_counts' => array('fid'),
+      'flag_types' => array('fid'),
+    ),
+    'false positives' => array(
+      'aggregator_category_feed' => array('fid'),
+      'biblio_field_type' => array('fid'),
+      'biblio_fields' => array('fid'),
+      'content_field_.*' => array('field_*_fid'),
+      'content_type_.*' => array('field_*_fid'),
+      'image' => array('fid'),
+      'profile_values' => array('fid'),
+      'upload' => array('fid'),
     ),
   ),
 
@@ -215,6 +251,7 @@ $tables_referenced = array(
       'pdsolicit' => array('nid'),
       'poll' => array('nid'),
       'poll_choices' => array('nid'),
+      'privacy' => array('nid'),
       'search_block' => array('nid'),
       'term_node' => array('nid'),
       'upload' => array('nid'),
@@ -315,6 +352,7 @@ $tables_referenced = array(
       'content_field_.*' => array('field_*_uid'),
       'content_type_.*' => array('field_*_uid'),
       'files' => array('uid'),
+      'flag_content' => array('uid'),
       'invite' => array('uid'),
       'invite_notifications' => array('uid'),
       'messaging_store' => array('uid'),
