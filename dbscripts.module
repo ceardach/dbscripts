@@ -547,6 +547,7 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
 
   // Restore each database file
   foreach ($tables_restored as $table) {
+    print $debugging ? "\nrestoring $table\n" : '';
     if (file_exists("$dump_location/tables/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/tables/$table.sql");
     if (file_exists("$dump_location/data/$table.sql")) exec("$mysql $db_connection_settings < $dump_location/data/$table.sql");
     if (file_exists("$dump_location/data/$table-new.sql")) exec("$mysql $db_connection_settings < $dump_location/data/$table-new.sql");

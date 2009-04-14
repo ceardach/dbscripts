@@ -57,6 +57,15 @@ $remove_column_charset = TRUE;
 
 
 /**
+ * Enable debugging
+ *
+ * This just prints out what dbscripts is doing so you can more easily find the
+ * source of an error.  Handy when you have duplicate key issues on restore.
+ */
+$debugging = FALSE;
+
+
+/**
  * Filtered tables
  * Some data is not nessisary in some cases and shouldn't be stored
  */
