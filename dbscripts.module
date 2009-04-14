@@ -209,15 +209,20 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
         // the foreign keys of the referenced table
         if (is_array($references['references'])) {
           foreach ($references['references'] as $referenced_table => $columns) {
-            $primary_keys = dbscripts_get_table_primary_keys($referenced_table, $branch);
-            if (is_array($primary_keys)) {
-              foreach ($columns as $column) {
-                if (in_array($column, $primary_keys)) {
-                  // Record the table/column pair along with the lastmerge increment value
-                  $tables_with_new_data[$referenced_table][$column] = $increment_lastmerge['num'];
+
+            // Don't continue if this table is production-only
+            if (!in_array($referenced_table, $tables_override)) {
+              $primary_keys = dbscripts_get_table_primary_keys($referenced_table, $branch);
+              if (is_array($primary_keys)) {
+                foreach ($columns as $column) {
+                  if (in_array($column, $primary_keys)) {
+                    // Record the table/column pair along with the lastmerge increment value
+                    $tables_with_new_data[$referenced_table][$column] = $increment_lastmerge['num'];
+                  }
                 }
               }
             }
+
           }
         }
 
@@ -225,7 +230,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
 
     }
 
-  }
+  } // woa, thats a lot of end brackets in a row
 
   // Get tables to be dumped by removing $tables_cleared from the list of all tables
   $tables_dumped = dbscripts_process_tables($temp_branch, $tables_cleared);
