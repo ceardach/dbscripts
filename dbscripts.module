@@ -1276,6 +1276,7 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
   }
 
   $table_can_be_referenced = FALSE;
+  $can_contain_new_data = FALSE;
   $references = array(
     'references' => array(),
     'false positives' => array(),
@@ -1402,10 +1403,12 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
       }
     }
 
+  } elseif (in_array($table, $tables_standalone) && in_array($table, $tables_merge)) {
+    $can_contain_new_data = TRUE;
   }
 
   // Add itself as a reference
-  if ($table_can_be_referenced) {
+  if ($table_can_be_referenced || $can_contain_new_data) {
     $references['references'][$table][] = $increment['id'];
   }
 
