@@ -63,7 +63,7 @@
           print "\n Please wait. This can take awhile.  'ctrl+c' to cancel.\n\n";
 
           $all_tables = file("$dump_path/development/table_list.txt", FILE_IGNORE_NEW_LINES);
-          $tables = dbscripts_process_tables('development', array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2));
+          $tables = _dbscripts_process_tables('development', array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2));
           foreach ($tables as $table) {
             if (in_array('found', $options)) {
               $table_references = dbscripts_get_table_references($table, 'development');
