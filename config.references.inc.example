@@ -42,6 +42,21 @@ $tables_standalone = array(
 // long_table_name_.*
 // field_*
 // field_*_type
+//
+// DEPENDANCIES
+// In rare occasions, the meaning of an id in one column depends upon the value
+// in another column of the same table.  For example, in the flag module, the
+// column "content_id" holds values that could be referencing nodes, comments
+// or users.  Which one depends upon the value of the "content_type" column.
+//
+// You can express these dependencies by making the column value of the
+// reference an array, in which is the depenant column value, and the column
+// that contains the id with an astrick symbolizing the value to change.
+// For example:
+//
+// 'flag_content' => array(array('content_type' => 'comment', 'content_id' => '*'))
+// 'flag_content' => array(array('content_type' => 'node', 'content_id' => '*'))
+// 'flag_content' => array('uid', array('content_type' => 'user', 'content_id' => '*'))
 
 $tables_referenced = array(
 
@@ -125,6 +140,7 @@ $tables_referenced = array(
 
   'comments' => array(
     'references' => array(
+      'flag_content' => array(array('content_type' => 'comment', 'content_id' => '*')),
     ),
     'false positives' => array(
       'aggregator_category_feed' => array('cid'),
@@ -266,6 +282,7 @@ $tables_referenced = array(
       'feedapi' => array('nid'),
       'feedapi_node_item' => array('nid'),
       'feedapi_node_item_feed' => array('feed_nid', 'feed_item_nid'),
+      'flag_content' => array(array('content_type' => 'node', 'content_id' => '*')),
       'forum' => array('nid'),
       'image' => array('nid'),
       'image_attach' => array('nid'),
@@ -399,7 +416,7 @@ $tables_referenced = array(
       'content_field_.*' => array('field_*_uid'),
       'content_type_.*' => array('field_*_uid'),
       'files' => array('uid'),
-      'flag_content' => array('uid'),
+      'flag_content' => array('uid', array('content_type' => 'user', 'content_id' => '*')),
       'invite' => array('uid'),
       'invite_notifications' => array('uid'),
       'legal_accepted' => array('uid'),
