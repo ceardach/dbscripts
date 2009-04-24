@@ -5,16 +5,17 @@
  */
 
 // Tables that do NOT have references elsewhere
-// Make sure these are tables you are sure will never be referenced because there will
-//    be no error checking.  If you are unsure, then place this in $tables_referenced
-//    and set 'false positives'
+// Make sure these are tables you are sure will never be referenced because
+//    there will be no error checking.  If you are unsure, then place this in
+//    $tables_referenced and set 'false positives'
 
 $tables_standalone = array(
   'access',
   'advanced_help_index',
   'authmap',
   'batch',
-  'blogapi_files', // this should not have auto_increment on fid, since it is files.fid (or at least should be)
+  'blogapi_files', // this should not have auto_increment on fid, since it is
+                   // files.fid (or at least should be)
   'boxes',
   'contact',
   'filters', // references are to filter_formats.format
