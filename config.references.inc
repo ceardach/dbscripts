@@ -133,6 +133,14 @@ $tables_referenced = array(
     ),
   ),
 
+  'faceted_search_env' => array(
+    'references' => array(
+      'faceted_search_filters' => array('env_id'),
+    ),
+    'false positives' => array(
+    ),
+  ),
+
   'files' => array(
     'references' => array(
       'content_field_.*' => array('field_*_fid'),
@@ -166,6 +174,7 @@ $tables_referenced = array(
     'false positives' => array(
       'date_format' => array('format'),
       'date_format_locale' => array('format'),
+      'simplenews_newsletters' => array('s_format'),
     ),
   ),
 
@@ -205,6 +214,14 @@ $tables_referenced = array(
     ),
   ),
 
+  'legal_conditions' => array(
+    'references' => array(
+      'legal_accepted' => array('tc_id'),
+    ),
+    'false positives' => array(
+    ),
+  ),
+
   'locales_source' => array(
     'references' => array(
       'locales_target' => array('lid', 'plid'),
@@ -222,6 +239,14 @@ $tables_referenced = array(
       'menu_links' => array('plid'),
     ),
     'false positives' => array(
+    ),
+  ),
+
+  'mode' => array(
+    'references' => array(
+    ),
+    'false positives' => array(
+      'formdefaults_forms' => array('formid'),
     ),
   ),
 
@@ -254,7 +279,11 @@ $tables_referenced = array(
       'poll_choices' => array('nid'),
       'privacy' => array('nid'),
       'search_block' => array('nid'),
+      'simplenews_mail_spool' => array('nid'),
+      'simplenews_newsletters' => array('nid'),
       'term_node' => array('nid'),
+      'taxonomy_facets_node' => array('nid'),
+      'taxonomy_facets_term_node' => array('nid'),
       'upload' => array('nid'),
       'webform' => array('nid'),
       'webform_component' => array('nid'),
@@ -269,6 +298,7 @@ $tables_referenced = array(
       'content_field_.*' => array('field_*_fid', 'field_*_list', 'field_*_data'),
       'content_type_.*' => array('field_*_fid', 'field_*_list', 'field_*_data'),
       'node' => array('tnid'),
+      'simplenews_snid_tid' => array('snid'),
     ),
   ),
 
@@ -284,6 +314,8 @@ $tables_referenced = array(
       'forum' => array('vid'),
       'nat' => array('vid'),
       'node' => array('vid'),
+      'simplenews_mail_spool' => array('vid'),
+      'simplenews_newsletters' => array('vid'),
       'term_node' => array('vid'),
       'upload' => array('vid'),
     ),
@@ -326,11 +358,23 @@ $tables_referenced = array(
     ),
   ),
 
+  'simplenews_subscriptions' => array(
+    'references' => array(
+      'simplenews_snid_tid' => array('snid'),
+    ),
+    'false positives' => array(
+    ),
+  ),
+
   'term_data' => array(
     'references' => array(
       'forum' => array('tid'),
       'nat' => array('tid'),
       'permission' => array('tid'),
+      'simplenews_mail_spool' => array('tid'),
+      'simplenews_newsletters' => array('tid'),
+      'simplenews_snid_tid' => array('tid'),
+      'taxonomy_facets_term_node' => array('tid'),
       'taxonomy_manager_merge' => array('main_tid', 'merged_tid'),
       'term_hierarchy' => array('tid'),
       'term_node' => array('tid'),
@@ -356,6 +400,8 @@ $tables_referenced = array(
       'flag_content' => array('uid'),
       'invite' => array('uid'),
       'invite_notifications' => array('uid'),
+      'legal_accepted' => array('uid'),
+      'og_notifications' => array('uid'),
       'messaging_store' => array('uid'),
       'node' => array('uid'),
       'node_revisions' => array('uid'),
@@ -363,6 +409,7 @@ $tables_referenced = array(
       'og_uid_global' => array('uid'),
       'pdsolicit' => array('uid_sender', 'uid_recipient'),
       'profile_values' => array('uid'),
+      'simplenews_subscriptions' => array('uid'),
       'user_import_extra' => array('uid'),
       'users_roles' => array('uid'),
       'webform_submissions' => array('uid'),
@@ -389,6 +436,8 @@ $tables_referenced = array(
       'forum' => array('vid'),
       'nat' => array('vid'),
       'node' => array('vid'),
+      'simplenews_mail_spool' => array('vid'),
+      'simplenews_newsletters' => array('vid'),
       'taxonomy_dhtml' => array('vid'),
       'taxonomy_tree' => array('vid'),
       'term_data' => array('vid'),
@@ -415,6 +464,8 @@ $tables_referenced = array(
       'content_type_.*' => array('vid', 'field_*_nid', 'field_*_fid', 'field_*_list', 'field_*_data'),
       'forum' => array('vid'),
       'node' => array('vid'),
+      'simplenews_mail_spool' => array('vid'),
+      'simplenews_newsletters' => array('vid'),
       'term_data' => array('vid'),
       'term_node' => array('vid'),
       'upload' => array('vid'),
