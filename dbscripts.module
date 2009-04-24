@@ -1,83 +1,6 @@
 <?php
 
 /**
- * Get the database connection settings from settings.php file
- *
- * Helper function for dump, erase and restore functions
- */
-function _dbscripts_db_connect() {
-  require('config.inc');
-  require("$settings_path");
-
-  // Ensure required files are loaded
-  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
-  if (!isset($db_url)) return "The file 'settings.php' file does not exist.";
-
-  preg_match('/'.$dbtype.':\/\/([^:]+):([^@]+)@([^\/]+)\/(.+)/', $db_url, $db_settings);
-
-  if (empty($db_settings)) {
-    return FALSE;
-  } else {
-
-    $dbuser = $db_settings[1];
-    $dbpassword = $db_settings[2];
-    $dbhost = $db_settings[3];
-    $dbname = $db_settings[4];
-
-    return "-u $dbuser -p$dbpassword -h $dbhost $dbname";
-  }
-}
-
-
-/**
- * Get options for dump file and filtering
- *
- * Helper function for restore.php and dump.php
- *
- * @param $argv
- *   Pass in the $_SERVER['argv'] variable to return options set when running
- *   the script.
- */
-function _dbscripts_get_options($argv) {
-  // Set default filter option
-  $options['filter'] = 'full';
-
-  // Set which branch to use
-  $use_default_branch = FALSE;
-  if(isset($argv[1])) {
-    if(in_array($argv[1],array('min','none','full'))) {
-      $use_default_branch = TRUE;
-      $options['filter'] = $argv[1];
-    }
-  } else {
-    $use_default_branch = TRUE;
-  }
-  $options['branch'] = $use_default_branch ? 'development' : $argv[1];
-
-  // Set which last-merge to use
-  $use_default_lastmerge = FALSE;
-  if(isset($argv[2])) {
-    if(in_array($argv[2],array('min','none','full'))) {
-      $use_default_lastmerge = TRUE;
-      $options['filter'] = $argv[2];
-    }
-  } else {
-    $use_default_lastmerge = TRUE;
-  }
-  $options['last-merge'] = $use_default_lastmerge ? 'last-merge' : $argv[2];
-
-  // Set filter option
-  if(isset($argv[3])) {
-    if(in_array($argv[3],array('min','none','full'))) {
-      $options['filter'] = $argv[3];
-    }
-  }
-
-  return $options;
-}
-
-
-/**
  * Dump the database
  *
  * @param $branch
@@ -425,6 +348,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
 }
 
 
+
 /**
  * Erase the database
  *
@@ -485,6 +409,7 @@ function dbscripts_erase($filter_option = 'full') {
 
   return "\n$message\n\n";
 }
+
 
 
 /**
@@ -572,6 +497,7 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
 
   return "\n$message\n\n";
 }
+
 
 
 /**
@@ -935,67 +861,6 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
 
 
 /**
- * Process an array of tables
- *
- * When given an array of all tables, you can either remove matches
- * from the table list, or pick only positive matches
- *
- * @param $branch
- *    Which branch should be use for its list of tables
- * @param $tables_compare
- *    An array of table names that should be compared
- * @param $remove_match
- *    Should matches in $tables_compare be removed from the list, or kept
- */
-function _dbscripts_process_tables($branch, $tables_compare, $remove_match = TRUE) {
-  require('config.inc');
-
-  // Ensure required files are loaded
-  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
-
-  // Set location
-  $branch_location = "$dump_path/$branch";
-
-  // Check if the branch exists, otherwise fail
-  if (!file_exists($branch_location)) {
-    return "The branch '$branch' does not exist";
-  }
-
-  // Check if the table list file exists, otherwise fail
-  if (!file_exists("$branch_location/table_list.txt")) {
-    return "The branch '$branch' does not have a table_list.txt file";
-  }
-
-  $tables = file("$branch_location/table_list.txt", FILE_IGNORE_NEW_LINES);
-  $tables_match = array();
-
-  foreach ($tables as $key => $table) {
-    // Since some tables are specified with a .*, generating other possible values
-    $truncated = explode('_', $table);
-    $truncated1 = isset($truncated[0]) ? $truncated[0].'_.*' : '';
-    $truncated2 = isset($truncated[1]) ? $truncated[0].'_'.$truncated[1].'_.*' : '';
-
-    $check_tables = array($table, $truncated1, $truncated2);
-    foreach ($check_tables as $check) {
-      if (in_array($check, $tables_compare)) {
-        $tables_match[$key] = $table;
-      }
-    }
-  }
-
-  foreach ($tables_match as $key => $table) {
-    unset($tables[$key]);
-  }
-
-  if ($remove_match) {
-    return $tables;
-  } else {
-    return $tables_match;
-  }
-}
-
-
-/**
  * Get a given table's current auto increment value
  *
  * @param $table
@@ -1040,6 +905,7 @@ function dbscripts_get_table_increment($table, $branch) {
 
   return $increment;
 }
+
 
 
 /**
@@ -1228,6 +1094,7 @@ function dbscripts_find_possible_table_references($table, $branch, $filter_optio
 
   return $list;
 }
+
 
 
 /**
@@ -1831,6 +1698,147 @@ function dbscripts_raise_all_increments($dev_branch = 'development', $lastmerge_
     }
   }
 
+}
+
+
+
+/**
+ * Get the database connection settings from settings.php file
+ *
+ * Helper function for dump, erase and restore functions
+ */
+function _dbscripts_db_connect() {
+  require('config.inc');
+  require("$settings_path");
+
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+  if (!isset($db_url)) return "The file 'settings.php' file does not exist.";
+
+  preg_match('/'.$dbtype.':\/\/([^:]+):([^@]+)@([^\/]+)\/(.+)/', $db_url, $db_settings);
+
+  if (empty($db_settings)) {
+    return FALSE;
+  } else {
+
+    $dbuser = $db_settings[1];
+    $dbpassword = $db_settings[2];
+    $dbhost = $db_settings[3];
+    $dbname = $db_settings[4];
+
+    return "-u $dbuser -p$dbpassword -h $dbhost $dbname";
+  }
+}
+
+
+
+/**
+ * Get options for dump file and filtering
+ *
+ * Helper function for restore.php and dump.php
+ *
+ * @param $argv
+ *   Pass in the $_SERVER['argv'] variable to return options set when running
+ *   the script.
+ */
+function _dbscripts_get_options($argv) {
+  // Set default filter option
+  $options['filter'] = 'full';
+
+  // Set which branch to use
+  $use_default_branch = FALSE;
+  if(isset($argv[1])) {
+    if(in_array($argv[1],array('min','none','full'))) {
+      $use_default_branch = TRUE;
+      $options['filter'] = $argv[1];
+    }
+  } else {
+    $use_default_branch = TRUE;
+  }
+  $options['branch'] = $use_default_branch ? 'development' : $argv[1];
+
+  // Set which last-merge to use
+  $use_default_lastmerge = FALSE;
+  if(isset($argv[2])) {
+    if(in_array($argv[2],array('min','none','full'))) {
+      $use_default_lastmerge = TRUE;
+      $options['filter'] = $argv[2];
+    }
+  } else {
+    $use_default_lastmerge = TRUE;
+  }
+  $options['last-merge'] = $use_default_lastmerge ? 'last-merge' : $argv[2];
+
+  // Set filter option
+  if(isset($argv[3])) {
+    if(in_array($argv[3],array('min','none','full'))) {
+      $options['filter'] = $argv[3];
+    }
+  }
+
+  return $options;
+}
+
+
+
+/**
+ * Process an array of tables
+ *
+ * When given an array of all tables, you can either remove matches
+ * from the table list, or pick only positive matches
+ *
+ * @param $branch
+ *    Which branch should be use for its list of tables
+ * @param $tables_compare
+ *    An array of table names that should be compared
+ * @param $remove_match
+ *    Should matches in $tables_compare be removed from the list, or kept
+ */
+function _dbscripts_process_tables($branch, $tables_compare, $remove_match = TRUE) {
+  require('config.inc');
+
+  // Ensure required files are loaded
+  if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
+
+  // Set location
+  $branch_location = "$dump_path/$branch";
+
+  // Check if the branch exists, otherwise fail
+  if (!file_exists($branch_location)) {
+    return "The branch '$branch' does not exist";
+  }
+
+  // Check if the table list file exists, otherwise fail
+  if (!file_exists("$branch_location/table_list.txt")) {
+    return "The branch '$branch' does not have a table_list.txt file";
+  }
+
+  $tables = file("$branch_location/table_list.txt", FILE_IGNORE_NEW_LINES);
+  $tables_match = array();
+
+  foreach ($tables as $key => $table) {
+    // Since some tables are specified with a .*, generating other possible values
+    $truncated = explode('_', $table);
+    $truncated1 = isset($truncated[0]) ? $truncated[0].'_.*' : '';
+    $truncated2 = isset($truncated[1]) ? $truncated[0].'_'.$truncated[1].'_.*' : '';
+
+    $check_tables = array($table, $truncated1, $truncated2);
+    foreach ($check_tables as $check) {
+      if (in_array($check, $tables_compare)) {
+        $tables_match[$key] = $table;
+      }
+    }
+  }
+
+  foreach ($tables_match as $key => $table) {
+    unset($tables[$key]);
+  }
+
+  if ($remove_match) {
+    return $tables;
+  } else {
+    return $tables_match;
+  }
 }
 
 
