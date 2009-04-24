@@ -5,9 +5,10 @@
  */
 
 // Tables that do NOT have references elsewhere
+//
 // Make sure these are tables you are sure will never be referenced because
-//    there will be no error checking.  If you are unsure, then place this in
-//    $tables_referenced and set 'false positives'
+// there will be no error checking.  If you are unsure, then place this in
+// $tables_referenced and set 'false positives'
 
 $tables_standalone = array(
   'access',
@@ -30,9 +31,10 @@ $tables_standalone = array(
 
 
 // Tables that are referenced by other tables
+//
 // Error checking will be performed against this array to ensure no additional
-//    possibilies were added
-// You may also add new associations even if they are not brought up automatically
+// possibilies were added. You may also (and may need to) add new associations
+// even if they are not brought up automatically.
 //
 // POSSIBLE WILD CARDS
 // table_.*
@@ -229,7 +231,7 @@ $tables_referenced = array(
     'false positives' => array(
       'book' => array('mlid'),
       'menu_links' => array('plid' ),
-      'webform' => array('additional_validate' ),
+      'webform' => array('additional_validate'),
     ),
   ),
 
@@ -515,7 +517,7 @@ $tables_referenced = array(
 //
 // VIEWS ARE NOT SUPPORTED: Due to the method that views stores its data, it is
 // impossible to perform a string match and replace.  Record any references made
-// to specific NEWLY CREATED node/users/terms since the last merge
+// to specific node/users/terms NEWLY CREATED since the last merge
 // in 'PostMergeInstructions.txt' and update the view after merging.  Direct
 // references to nodes created before the last merge will cause no
 // difficulties.
