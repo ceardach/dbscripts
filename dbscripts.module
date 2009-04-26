@@ -1083,13 +1083,36 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
 
       // Find out the column position
       $column_positions = array();
+      $dependant_columns = array();
       foreach ($columns_referenced as $column_to_modify) {
         $found_position = FALSE;
-        foreach ($table_columns as $key => $table_column) {
-          if (strpos($table_column, "`$column_to_modify`")) {
-            $column_positions[] = $key;
-            $found_position = TRUE;
+        foreach ($table_columns as $key => $table_column) { // the key defines the column's position
+
+          if (is_array($column_to_modify)) {
+            // If the column_to_modify value is an array, it is a case that has dependencies
+
+            // Restructure the array to something more useful, with the columns' positions
+            foreach ($column_to_modify as $column_name => $value) {
+              if (strpos($table_column, "`$column_name`")) {
+                if ($value == '*') {
+                  $dependant_columns['foreign-key']['name'] = $column_name;
+                  $dependant_columns['foreign-key']['position'] = $key;
+                } else {
+                  $dependant_columns['dependencies'][$column_name]['value'] = $value;
+                  $dependant_columns['dependencies'][$column_name]['position'] = $key;
+                }
+                $found_position = TRUE;
+              }
+            }
+
+          } else {
+            // but in most cases just have a single column value to find the position of
+            if (strpos($table_column, "`$column_to_modify`")) {
+              $column_positions[] = $key;
+              $found_position = TRUE;
+            }
           }
+
         }
         if (!$found_position) {
           print "ERROR: Didn't find column '$column_to_modify' in '$table_to_modify' when I thought I should have.";
