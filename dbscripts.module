@@ -876,7 +876,7 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
  * @param $branch
  *   Branch to make the changes on.
  */
-function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch, $filter_option = 'full') {
+function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch = 'development', $filter_option = 'full') {
   require('config.inc');
   require('config.references.inc');
 
