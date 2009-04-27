@@ -1133,7 +1133,7 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
       // Do the same for column positions of foreign keys with dependencies
       if (array_key_exists('foreign-key', $dependant_columns)) {
         $position = $dependant_columns['foreign-key']['position'];
-        $column_variables .= "\ncolumn_with_dependency[$position] = $position\n";
+        $column_variables .= "\ncolumn_with_dependency = $position\n";
         foreach ($dependant_columns['dependencies'] as $column_name => $values) {
           $position = $values['position'];
           $value = $values['value'];
