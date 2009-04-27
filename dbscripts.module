@@ -33,6 +33,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
     return "\nImproper database connection settings.\n\n";
   }
 
+  // Define paths
   $dump_location = "$dump_path/$branch";
   $lastmerge_location = "$dump_path/$lastmerge_branch";
   $temp_branch = "tmp";
@@ -288,7 +289,9 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
       exec("echo \"$line\" >> $rewritten_version");
     }
 
-    // Convert the file to SQL
+    // Convert the file back to SQL
+
+    // Get an array of the last-merge sql file
     $sql = file("$lastmerge_version", FILE_IGNORE_NEW_LINES);
 
     // Get the top sql comments
@@ -861,7 +864,8 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
 
 
 /**
- * Raise the increments of the given table within the given branch
+ * Raise the increments, and its foreign keys, of the given table within the
+ * given branch
  *
  * @param $table
  *   Table to raise the increments of
@@ -1050,7 +1054,7 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
   exec("sed 's/ AUTO_INCREMENT={$current_inc['num']} / AUTO_INCREMENT={$increment_change} /g' $branch_location/tables/$table.sql > $temp_location/$table.sql");
   exec("mv $temp_location/$table.sql $branch_location/tables/$table.sql");
 
-  // For all references, raise the increment
+  // Raise the increment for all foreign keys of the given table
   foreach ($table_references['references'] as $table_to_modify => $columns_referenced) {
 
     // Check if this table exists and has any data stored
