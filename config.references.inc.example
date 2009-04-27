@@ -57,6 +57,9 @@ $tables_standalone = array(
 // 'flag_content' => array(array('content_type' => 'comment', 'content_id' => '*'))
 // 'flag_content' => array(array('content_type' => 'node', 'content_id' => '*'))
 // 'flag_content' => array('uid', array('content_type' => 'user', 'content_id' => '*'))
+//
+// Each table can only have one instance of this type of dependency.
+// You CANNOT use wildcards when defining any values for dependancies.
 
 $tables_referenced = array(
 

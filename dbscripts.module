@@ -1327,14 +1327,14 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
           $wildcard = FALSE;
           if (is_array($config_references) && array_key_exists($check, $config_references) && is_array($config_references[$check])) {
             foreach ($config_references[$check] as $column) {
-              if (strpos($column, '*') !== FALSE) {
+              if (!is_array($column) && strpos($column, '*') !== FALSE) {
                 $wildcard = TRUE;
               }
             }
           }
           if (is_array($config_false_positive) && array_key_exists($check, $config_false_positive) && is_array($config_false_positive[$check])) {
             foreach ($config_false_positive[$check] as $column) {
-              if (strpos($column, '*') !== FALSE) {
+              if (!is_array($column) && strpos($column, '*') !== FALSE) {
                 $wildcard = TRUE;
               }
             }
