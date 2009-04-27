@@ -1138,7 +1138,11 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
         foreach ($dependant_columns['dependencies'] as $column_name => $values) {
           $position = $values['position'];
           $value = $values['value'];
-          $column_variables .= "\ncolumn_dependency[$position] = $value\n";
+          if (is_string($value)) {
+            $column_variables .= "\ncolumn_dependency[$position] = \"'$value'\"\n";
+          } else {
+            $column_variables .= "\ncolumn_dependency[$position] = $value\n";
+          }
         }
       }
 
