@@ -168,6 +168,7 @@ $tables_merge = array(
   'node_access',
   'node_revisions',
   'og',
+  'og_access_post',
   'og_ancestry',
   'og_notifications',
   'og_uid',

@@ -294,6 +294,7 @@ $tables_referenced = array(
       'node_access' => array('nid'),
       'node_revisions' => array('nid'),
       'og' => array('nid'),
+      'og_access_post' => array('nid'),
       'og_ancestry' => array('nid', 'group_nid'),
       'og_uid' => array('nid'),
       'pdsolicit' => array('nid'),
