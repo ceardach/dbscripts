@@ -1,3 +1,15 @@
+REQUIRED
+
+  - MySQL version 4.1.20 or 5.0.23 or better
+    See http://bugs.mysql.com/bug.php?id=19025
+
+  - GNU Diff3.  Sun Solaris, for example, uses their own version of Diff3 
+    which is incompatible with how it is used in this script.
+
+  - GNU AWK (GAWK).  Sun Solaris may not have a compatible version of AWK.  
+
+
+
 INSTALLATION
 
   1.  Place the dbscripts folder wherever you would wish.  It is recommended to 
@@ -103,19 +115,6 @@ Tips
     Enable revisions on ALL content types, and install the Diff module.  It 
     helps tremendously in conflict resolution (such as if the same node was 
     edited in both development and production).
-
-
-
-REQUIRED
-
-GNU Diff3.  Sun Solaris, for example, uses their own version of Diff3 which is 
-incompatible with how it is used in this script.
-
-
-GNU AWK (GAWK).  Sun Solaris may not have a compatible version of AWK.  
-
-You will have to install the GNU versions of these programs when using Sun 
-Solaris.
 
 
 MERGING DATABASES 
