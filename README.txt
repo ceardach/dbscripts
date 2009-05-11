@@ -112,9 +112,12 @@ Tips
     Do NOT touch the last-merge version, except to update its schema before a 
     merge.
     
-    Enable revisions on ALL content types, and install the Diff module.  It 
+    Enable revisions on ALL content types, and install the 'Diff' module.  It 
     helps tremendously in conflict resolution (such as if the same node was 
     edited in both development and production).
+    
+    Use the 'Mode' module to create development, production and read-only
+    sets of permissions.  Enable the "read only" mode when merging.
 
 
 MERGING DATABASES 
