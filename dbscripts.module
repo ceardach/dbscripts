@@ -215,8 +215,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
 
   // Move the dump files to the working space's last dump
   if (file_exists($workspace_location) && exec("ls $workspace_location")) exec("rm -rf $workspace_location/*");
-  exec("mkdir -p $workspace_location/data");
-  exec("mkdir -p $workspace_location/tables");
+  if (!file_exists($workspace_location)) exec("mkdir -p $workspace_location");
   exec("mv $temp_location/* $workspace_location");
 
   // Fix the users table issue with conflicting timestamps
