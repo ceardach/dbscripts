@@ -283,6 +283,7 @@ $tables_referenced = array(
       'content_field_.*' => array('nid', 'field_*_nid'),
       'content_type_.*' => array('nid', 'field_*_nid'),
       'feedapi' => array('nid'),
+      'feedapi_mapper' => array('nid'),
       'feedapi_node_item' => array('nid'),
       'feedapi_node_item_feed' => array('feed_nid', 'feed_item_nid'),
       'flag_content' => array(array('content_type' => 'node', 'content_id' => '*')),
@@ -292,7 +293,9 @@ $tables_referenced = array(
       'img_assist_map' => array('nid', 'iid'),
       'nat' => array('nid'),
       'node_access' => array('nid'),
+      'node_field_rdf' => array('property_nid'),
       'node_revisions' => array('nid'),
+      'node_type_rdf' => array('class_nid'),
       'og' => array('nid'),
       'og_access_post' => array('nid'),
       'og_ancestry' => array('nid', 'group_nid'),
@@ -368,6 +371,28 @@ $tables_referenced = array(
     ),
   ),
 
+  'rdf_data' => array(
+    'references' => array(
+    ),
+    'false positives' => array(
+      'biblio_duplicates' => array('did'),
+      'biblio_field_type' => array('ftdid', 'cust_tdid'),
+      'biblio_field_type_data' => array('ftdid'),
+    ),
+  ),
+
+  'rdf_resources' => array(
+    'references' => array(
+    ),
+    'false positives' => array(
+      'better_formats_defaults' => array('rid'),
+      'blocks_roles' => array('rid'),
+      'permission' => array('rid'),
+      'users_roles' => array('rid'),
+      'workflow_access' => array('rid'),
+    ),
+  ),
+
   'role' => array(
     'references' => array(
       'better_formats_defaults' => array('rid'),
@@ -394,6 +419,7 @@ $tables_referenced = array(
       'forum' => array('tid'),
       'nat' => array('tid'),
       'permission' => array('tid'),
+      'rdf_data' => array('tid'),
       'simplenews_mail_spool' => array('tid'),
       'simplenews_newsletters' => array('tid'),
       'simplenews_snid_tid' => array('tid'),
@@ -432,6 +458,7 @@ $tables_referenced = array(
       'og_uid_global' => array('uid'),
       'pdsolicit' => array('uid_sender', 'uid_recipient'),
       'profile_values' => array('uid'),
+      'rdf_data' => array('uid'),
       'simplenews_subscriptions' => array('uid'),
       'user_import_extra' => array('uid'),
       'users_roles' => array('uid'),
@@ -514,6 +541,7 @@ $tables_referenced = array(
     ),
     'false positives' => array(
       'pdsolicit' => array('sid', 'sid_delegated'),
+      'rdf_data' => array('sid'),
       'workflow_states' => array('sysid'),
     ),
   ),
