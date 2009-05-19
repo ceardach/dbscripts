@@ -147,6 +147,7 @@ $tables_merge = array(
   'biblio_keyword_data',
   'blogapi_files',
   'book',
+  'contact',
   'content_field_.*',
   'content_type_.*',
   'feedapi',
