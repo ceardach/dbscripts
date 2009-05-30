@@ -131,12 +131,10 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
   switch($filter_option){
     case 'none':
       $message = "Performed a full database dump to $branch.";
-      $fix_user_table = FALSE;
       break;
 
     case 'min':
       $tables_cleared = array_merge($tables_filtered, $tables_filtered_l1);
-      $fix_user_table = FALSE;
       $message = "Dumped the database to $branch with minimal filtering.";
       break;
 
