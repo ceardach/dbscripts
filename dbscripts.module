@@ -118,7 +118,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
   if (!file_exists("$dump_location/tables")) exec("mkdir -p $dump_location/tables");
 
   $lastmerge_exists = FALSE;
-  if (file_exists("$lastmerge_location") && file_exists("$dump_location/table_list.txt")) {
+  if (file_exists("$lastmerge_location") && file_exists("$dump_location/table_list.txt") && $branch != $lastmerge_branch) {
     $lastmerge_exists = TRUE;
   }
 
