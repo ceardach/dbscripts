@@ -798,7 +798,6 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
         $check_conflict = exec("grep '^<<<<<<<' $merge_version");
         if ($check_conflict) {
            $conflict[] = $table;
-           exec("echo '$table' > $conflict_file");
         }
 
         // Merge the new data
@@ -855,6 +854,15 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
 
     // If there were conflicts, fail
     if (isset($conflict[0])) {
+      // Store the conflicted tables in a file
+      foreach ($conflict as $key => $table) {
+        if ($key > 0) {
+          exec("echo '$table' >> $conflict_file");
+        } else {
+          exec("echo '$table' > $conflict_file");
+        }
+      }
+
       print "\nDON'T PANIC! But, I'm afraid I have to inform you that the following tables\nfailed to merge:\n\n";
       print_r($conflict);
       print "\nPlease correct the conflicts in '$merge_location/data' (look for '<<<<<<<').\n";
