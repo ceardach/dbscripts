@@ -1251,6 +1251,10 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
   }
 
   $table_can_be_referenced = FALSE;
+  $references = array(
+    'references' => array(),
+    'false positives' => array(),
+  );
   if (!in_array($table, $tables_standalone) && isset($increment['id'])) {
     $table_can_be_referenced = TRUE;
 
@@ -1265,7 +1269,6 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
     $table_list = file("$branch_location/table_list.txt", FILE_IGNORE_NEW_LINES);
 
     // Since you can set the configuration with *'s, creating an array $references of real values
-    $references = array();
     foreach ($table_list as $check_table) {
       // Format possible values for the table name
       $table_name_parts = explode("_", $check_table);
@@ -1381,11 +1384,7 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
     $references['references'][$table][] = $increment['id'];
   }
 
-  if (isset($references)) {
-    return $references;
-  } else {
-    return;
-  }
+  return $references;
 }
 
 
