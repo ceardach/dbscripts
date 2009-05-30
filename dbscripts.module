@@ -518,12 +518,12 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
       break;
 
     case 'min':
-      $tables_preserved = $tables_filtered_l1;
+      $tables_preserved = array_merge($tables_filtered, $tables_filtered_l1);
       $message = "Restored the database perserving minimal tables";
       break;
 
     default:
-      $tables_preserved = array_merge($tables_filtered_l1,$tables_filtered_l2);
+      $tables_preserved = array_merge($tables_filtered, $tables_filtered_l1,$tables_filtered_l2);
       $message = "Restored the database preserving the full option of tables";
       break;
   }
