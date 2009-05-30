@@ -2,8 +2,10 @@
 
 /**
  * Get the database connection settings from settings.php file
+ *
+ * Helper function for dump, erase and restore functions
  */
-function dbscripts_db_connect() {
+function _dbscripts_db_connect() {
   require('config.inc');
   require("$settings_path/settings.php");
 
@@ -103,7 +105,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
   if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
   if (!isset($tables_referenced)) return "The file 'config.references.inc' does not exist.  Copy from the example version?";
 
-  $db_connection_settings = dbscripts_db_connect();
+  $db_connection_settings = _dbscripts_db_connect();
   if (!$db_connection_settings) {
     return "\nImproper database connection settings.\n\n";
   }
@@ -435,7 +437,7 @@ function dbscripts_erase($filter_option = 'full') {
   // Ensure required files are loaded
   if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
 
-  $db_connection_settings = dbscripts_db_connect();
+  $db_connection_settings = _dbscripts_db_connect();
   if (!$db_connection_settings) {
     return "\nImproper database connection settings.\n\n";
   }
@@ -500,7 +502,7 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
   // Ensure required files are loaded
   if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
 
-  $db_connection_settings = dbscripts_db_connect();
+  $db_connection_settings = _dbscripts_db_connect();
   if (!$db_connection_settings) {
     return "\nImproper database connection settings.\n\n";
   }
