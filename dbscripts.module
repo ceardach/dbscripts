@@ -30,11 +30,13 @@ function dbscripts_db_connect() {
 /**
  * Get options for dump file and filtering
  *
+ * Helper function for restore.php and dump.php
+ *
  * @param $argv
  *   Pass in the $_SERVER['argv'] variable to return options set when running
  *   the script.
  */
-function dbscripts_get_options($argv) {
+function _dbscripts_get_options($argv) {
   // Set default filter option
   $options['filter'] = 'full';
 
