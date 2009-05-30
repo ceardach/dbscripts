@@ -60,7 +60,8 @@
             dependency_match = 0;
             for (n = 0; n < num_fields; n++) {
               if (n in column_dependency) {
-                if (csv[n] != column_dependency[n]) {
+                # Check for both string and integer possibilities of the value
+                if (csv[n] != column_dependency[n] && csv[n] != ("'" column_dependency[n] "'")) {
                   # Unset found if there is even one case of failure
                   dependency_pattern_found = 0;
                 } else {
