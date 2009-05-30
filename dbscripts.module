@@ -169,7 +169,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
   }
 
   // Remove all AUTO_INCREMENT values of the filtered tables
-  $tables_to_filter = dbscripts_process_tables($temp_branch, $tables_cleared, FALSE);
+  $tables_to_filter = _dbscripts_process_tables($temp_branch, $tables_cleared, FALSE);
   foreach ($tables_to_filter as $table) {
     $filtered_increment = dbscripts_get_table_increment($table, $temp_branch);
     exec("sed 's/ AUTO_INCREMENT={$filtered_increment['num']}//g' $temp_location/tables/$table.sql > $temp_location/$table.sql");
@@ -180,7 +180,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
   if ($branch != $lastmerge_branch && $lastmerge_exists) {
 
     // Get all tables that have content that would need to be merged
-    $tables_to_merge = dbscripts_process_tables($temp_branch, $tables_merge, FALSE);
+    $tables_to_merge = _dbscripts_process_tables($temp_branch, $tables_merge, FALSE);
 
     // Find references for each table
     foreach ($tables_to_merge as $table) {
@@ -226,9 +226,9 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
   } // woa, thats a lot of end brackets in a row
 
   // Get tables to be dumped by removing $tables_cleared from the list of all tables
-  $tables_dumped = dbscripts_process_tables($temp_branch, $tables_cleared);
+  $tables_dumped = _dbscripts_process_tables($temp_branch, $tables_cleared);
   if (!is_array($tables_dumped)) {
-    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
+    // Fail and pass through the message from _dbscripts_process_tables if it didn't pass an array
     return "\n$tables_dumped\n\n";
   }
 
@@ -537,9 +537,9 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
   dbscripts_erase($filter_option);
 
   // Get a list of tables to restore by removing $tables_preserved from the list of all tables
-  $tables_restored = dbscripts_process_tables($branch, $tables_preserved);
+  $tables_restored = _dbscripts_process_tables($branch, $tables_preserved);
   if (!is_array($tables_restored)) {
-    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
+    // Fail and pass through the message from _dbscripts_process_tables if it didn't pass an array
   	return "\n$tables_restored\n\n";
   }
 
@@ -710,15 +710,15 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
     exec("cp $dev_location/data/* $tmpdev_location/data");
 
     // Define the tables, fail if they don't return arrays
-    $tables_content = dbscripts_process_tables($dev_branch, $tables_merge, FALSE);
+    $tables_content = _dbscripts_process_tables($dev_branch, $tables_merge, FALSE);
     if (!is_array($tables_content)) {
     	return "\n$tables_content\n\n";
     }
-    $tables_prod = dbscripts_process_tables($prod_branch, $tables_override, FALSE);
+    $tables_prod = _dbscripts_process_tables($prod_branch, $tables_override, FALSE);
     if (!is_array($tables_prod)) {
       return "\n$tables_prod\n\n";
     }
-    $tables_dev = dbscripts_process_tables($dev_branch, array_merge($tables_merge, $tables_override));
+    $tables_dev = _dbscripts_process_tables($dev_branch, array_merge($tables_merge, $tables_override));
     if (!is_array($tables_dev)) {
       return "\n$tables_dev\n\n";
     }
@@ -903,7 +903,7 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
   exec("cp $merge_location/data/* $prod_location/data");
 
   // Dev and last-merge do not need to be bothered with all the data
-  $tables_cleared = dbscripts_process_tables($tmpdev_branch, array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2), FALSE);
+  $tables_cleared = _dbscripts_process_tables($tmpdev_branch, array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2), FALSE);
   foreach ($tables_cleared as $table) {
     // Erase the data file
   	if (file_exists("$dev_location/data/$table.sql")) exec("rm $dev_location/data/$table.sql");
@@ -935,7 +935,7 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
  * @param $remove_match
  *    Should matches in $tables_compare be removed from the list, or kept
  */
-function dbscripts_process_tables($branch, $tables_compare, $remove_match = TRUE) {
+function _dbscripts_process_tables($branch, $tables_compare, $remove_match = TRUE) {
   require('config.inc');
 
   // Ensure required files are loaded
@@ -1068,9 +1068,9 @@ function dbscripts_find_tables_with_increment($branch, $filter_option = "full") 
       break;
   }
 
-  $table_list = dbscripts_process_tables($branch, $tables_ignored);
+  $table_list = _dbscripts_process_tables($branch, $tables_ignored);
   if (!is_array($table_list)) {
-    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
+    // Fail and pass through the message from _dbscripts_process_tables if it didn't pass an array
     return $table_list;
   }
 
@@ -1176,9 +1176,9 @@ function dbscripts_find_possible_table_references($table, $branch, $filter_optio
   }
 
   // List of tables to check
-  $table_list = dbscripts_process_tables($branch, $tables_ignored);
+  $table_list = _dbscripts_process_tables($branch, $tables_ignored);
   if (!is_array($table_list)) {
-    // Fail and pass through the message from dbscripts_process_tables if it didn't pass an array
+    // Fail and pass through the message from _dbscripts_process_tables if it didn't pass an array
     return $table_list;
   }
 
