@@ -1753,7 +1753,9 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
 
 /**
  * Raise all increments of a given branch based on the values of the last-merge
- * and production branches
+ * and production branches.
+ *
+ * Only used from within the raise_increments.php script.
  *
  * @param $dev_branch
  *   Location of the branch you wish to make the changes on.  All actions will
