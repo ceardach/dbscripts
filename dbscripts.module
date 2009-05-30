@@ -159,7 +159,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
   }
 
   // Check that a file actually has data, and stop if it doesn't
-  if (file_get_contents("$temp_location/$table_list[0].sql") == '') {
+  if (file_get_contents("$temp_location/{$table_list[0]}.sql") == '') {
     exec("rm $temp_location/*");
     return "\nEmpty data returned.  There may be a problem connecting to the database.\n\n";
   }
@@ -169,7 +169,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
   exec("mkdir -p $workspace_location/tables");
   exec("mkdir -p $workspace_location/data");
   exec("mv $temp_location/table_list.txt $workspace_location");
-  exec("mv $temp_location/* $workspace_location/tables");
+  exec("mv $temp_location/* $workspace_location/tables/");
 
   // Remove all AUTO_INCREMENT values of the filtered tables
   $tables_to_filter = dbscripts_process_tables($workspace_branch, $tables_cleared, FALSE);
@@ -397,8 +397,8 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
   // For now we're just going to directly copy everything to $dump_location
   // Eventually we'll actually perform a merge
   // Erasing directory without erasing folders for svn support
-  if (!file_exists("$dump_location/tables"))exec("rm $dump_location/tables/*");
-  if (!file_exists("$dump_location/data"))exec("rm $dump_location/data/*");
+  if (file_exists("$dump_location/tables")) exec("rm $dump_location/tables/*");
+  if (file_exists("$dump_location/data")) exec("rm $dump_location/data/*");
   exec("cp $workspace_location/table_list.txt $dump_location");
   exec("cp $workspace_location/tables/* $dump_location/tables");
   exec("cp $workspace_location/data/* $dump_location/data");
