@@ -11,6 +11,7 @@
       pattern_found = 0;
       
       if (i in columns_to_change) {
+      # Check for normal instances of possible foreign keys
       
         # If the column's value is one of the old increments, replace it with new value
         if (csv[i] in increment_pairs) {
@@ -47,6 +48,38 @@
           
         }
         
+      } elseif (i in column_with_dependency) {
+      # Check for cases where a possible foreign key value has a dependency
+      
+        # Check to see if the value is one of the old increments
+        if (csv[i] in increment_pairs) {
+        
+          # Check to see if the dependencies match up
+          dependency_pattern_found = 1;
+          dependency_match = 0;
+          for (n = 0; n < num_fields; n++) {
+            if (n in column_dependency) {
+              if (csv[n] != column_dependency[n]) {
+                # Unset found if there is even one case of failure
+                dependency_pattern_found = 0;
+              } else {
+                # Because we're setting found to default to true, 
+                # we need to ensure we really did find any values at all
+                dependency_match = 1;
+              }
+            } 
+          }
+          
+          # Now check to see if we really found anything
+          if (dependency_pattern_found == 1 && dependency_match == 1) {
+            pattern_found = 1;
+            
+            # Replace the value
+            printf "%s,", increment_pairs[csv[i]];
+          }
+          
+        }
+      
       }
       
       # If there were no matches, just keep the existing data
