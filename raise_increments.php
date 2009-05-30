@@ -11,8 +11,8 @@
         $table = $options[1];
         $start_at = $options[2];
         $change_to = $options[3];
-        $branch = isset($options[5]) ? $options[5] : 'development';
-        $filter_option = isset($options[6]) ? $options[6] : 'full';
+        $branch = isset($options[4]) ? $options[4] : 'development';
+        $filter_option = isset($options[5]) ? $options[5] : 'full';
 
         print dbscripts_raise_table_increments($table, $start_at, $change_to, $branch, $filter_option);
       } else {
