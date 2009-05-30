@@ -35,47 +35,38 @@ function dbscripts_db_connect() {
  *   the script.
  */
 function dbscripts_get_options($argv) {
+  // Set default filter option
+  $options['filter'] = 'full';
+
+  // Set which branch to use
   $use_default_branch = FALSE;
   if(isset($argv[1])) {
     if(in_array($argv[1],array('min','none','full'))) {
       $use_default_branch = TRUE;
-      $filter_options = $argv[1];
+      $options['filter'] = $argv[1];
     }
   } else {
     $use_default_branch = TRUE;
   }
+  $options['branch'] = $use_default_branch ? 'development' : $argv[1];
 
+  // Set which last-merge to use
   $use_default_lastmerge = FALSE;
   if(isset($argv[2])) {
     if(in_array($argv[2],array('min','none','full'))) {
       $use_default_lastmerge = TRUE;
-      $filter_options = $argv[2];
+      $options['filter'] = $argv[2];
     }
   } else {
     $use_default_lastmerge = TRUE;
   }
-
-  $options['branch'] = $use_default_branch ? 'development' : $argv[1];
   $options['last-merge'] = $use_default_lastmerge ? 'last-merge' : $argv[2];
 
+  // Set filter option
   if(isset($argv[3])) {
     if(in_array($argv[3],array('min','none','full'))) {
-      $filter_options = $argv[3];
+      $options['filter'] = $argv[3];
     }
-  }
-
-  switch ($filter_options) {
-    case 'min':
-    $options['filter'] = 'min';
-      break;
-
-    case 'none':
-      $options['filter'] = 'none';
-      break;
-
-    default:
-      $options['filter'] = 'full';
-      break;
   }
 
   return $options;
