@@ -1471,6 +1471,15 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
     return FALSE;
   }
 
+  // Add system path patterns as references
+  if (isset($system_paths[$table]['tables'])) {
+    foreach ($system_paths[$table]['tables'] as $system_path_table => $system_path_columns) {
+      foreach ($system_path_columns as $system_path_column) {
+        $table_references['references'][$system_path_table][] = $system_path_column;
+      }
+    }
+  }
+
   // Find the largest increment value between $change_to and the current
   // increment. Use the highest increment
   $current_inc = dbscripts_get_table_increment($table, $branch);
@@ -1585,14 +1594,6 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
   }
   exec("echo '}' >> $temp_location/increment_pairs.awk");
 
-  // Add system path patterns as references
-  if (isset($system_paths[$table]['tables'])) {
-    foreach ($system_paths[$table]['tables'] as $system_path_table => $system_path_columns) {
-      foreach ($system_path_columns as $system_path_column) {
-        $table_references['references'][$system_path_table][] = $system_path_column;
-      }
-    }
-  }
 
   // Raise the auto_increment value of the table
   exec("sed 's/ AUTO_INCREMENT={$current_inc['num']} / AUTO_INCREMENT={$increment_change} /g' $branch_location/tables/$table.sql > $temp_location/$table.sql");
