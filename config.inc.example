@@ -12,7 +12,7 @@
 $script_path = './dbscripts';
 
 // Location of settings.php
-$settings_path = './sites/default';
+$settings_path = './sites/default/settings.php';
 
 // Location where database dump files will be stored
 $dump_path = './databases';
@@ -43,9 +43,26 @@ $dbtype = 'mysqli';
  *
  * Set to FALSE to use your own auto_increment handling method.
  */
-
 $raise_increments_on_merge = TRUE;
 
+
+/**
+ * Some versions of MySQL do not set character encoding for column names which
+ * can cause unnessisary changes in the version control system.  If this is
+ * happening amungst your group of developers, you can set this value to TRUE
+ * to avoid the conflicts.  However, it means you cannot have special
+ * characters in your column names.
+ */
+$remove_column_charset = TRUE;
+
+
+/**
+ * Enable debugging
+ *
+ * This just prints out what dbscripts is doing so you can more easily find the
+ * source of an error.  Handy when you have duplicate key issues on restore.
+ */
+$debugging = FALSE;
 
 
 /**
@@ -56,6 +73,7 @@ $raise_increments_on_merge = TRUE;
 // These tables are always filtered except when 'none' filtering option is used
 // always deleted when performing a restore
 $tables_filtered =  array(
+  'biblio_import_cache',
   'cache',
   'cache_.*',
   'views_object_cache',
@@ -77,20 +95,35 @@ $tables_filtered_l2 =  array(
   'aggregator_item',
   'aggregator_category_item',
   'batch',
+  'biblioreference_keyword',
   'comment_notify',
   'fivestar_comment',
+  'flag_counts',
   'flood',
   'history',
+  'invite',
+  'invite_notifications',
+  'messaging_store',
   'mollom',
-  'node_comment_statistics',
   'node_counter',
+  'node_comment_statistics',
+  'notifications',
+  'notifications_event',
+  'notifications_fields',
+  'notifications_queue',
+  'notifications_sent',
   'poll_votes',
   'search_dataset',
   'search_index',
   'search_node_links',
   'search_total',
+  'simplenews_mail_spool',
+  'user_import',
+  'user_import_errors',
+  'user_import_extra',
   'votingapi_vote',
   'watchdog',
+  'workflow_scheduled_transition',
 );
 
 
@@ -106,23 +139,52 @@ $tables_merge = array(
   'aggregator_category_feed',
   'aggregator_feed',
   'authmap',
+  'biblio',
+  'biblio_contributor',
+  'biblio_contributor_data',
+  'biblio_duplicates',
+  'biblio_keyword',
+  'biblio_keyword_data',
   'blogapi_files',
   'book',
+  'contact',
   'content_field_.*',
   'content_type_.*',
+  'feedapi',
+  'feedapi_node_item',
+  'feedapi_node_item_feed',
+  'feedapi_stat',
   'files',
+  'flag_content',
   'forum',
   'image',
   'image_attach',
   'img_assist_map',
+  'legal_accepted',
+  'legal_conditions',
   'menu_links',
   'menu_router',
+  'nat',
   'node',
   'node_access',
   'node_revisions',
+  'og',
+  'og_access_post',
+  'og_ancestry',
+  'og_notifications',
+  'og_uid',
+  'og_uid_global',
+  'parser_common_syndication',
+  'privacy',
   'profile_values',
   'poll',
   'poll_choices',
+  'search_block',
+  'simplenews_newsletters',
+  'simplenews_snid_tid',
+  'taxonomy_facets_node',
+  'taxonomy_facets_term_node',
+  'taxonomy_manager_merge',
   'term_data',
   'term_hierarchy',
   'term_node',
@@ -136,6 +198,9 @@ $tables_merge = array(
   'vocabulary_node_types',
   'webform_submissions',
   'webform_submitted_data',
+  'workflow_node',
+  'workflow_node_history',
+  'workflow_transitions',
 );
 
 // Tables that contain content to be taken from production
@@ -145,21 +210,36 @@ $tables_override = array(
   'aggregator_item',
   'aggregator_category_item',
   'batch',
+  'biblioreference_keyword',
   'comments',
   'comment_notify',
   'fivestar_comment',
+  'flag_counts',
   'flood',
   'history',
+  'invite',
+  'invite_notifications',
+  'messaging_store',
   'mollom',
   'node_counter',
   'node_comment_statistics',
+  'notifications',
+  'notifications_event',
+  'notifications_fields',
+  'notifications_queue',
+  'notifications_sent',
   'poll_votes',
   'profile_values',
   'search_dataset',
   'search_index',
   'search_node_links',
   'search_total',
-  'sessions',
+  'simplenews_mail_spool',
+  'simplenews_subscriptions',
+  'user_import',
+  'user_import_errors',
+  'user_import_extra',
   'votingapi_vote',
   'watchdog',
+  'workflow_scheduled_transition',
 );
