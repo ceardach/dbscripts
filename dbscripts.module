@@ -114,7 +114,7 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
   $workspace_location = "$dump_path/$workspace_branch";
 
   // Creating required folders
-  if (!file_exists($temp_location)) exec("rm -r $temp_location/*");
+  if (exec("ls $temp_location")) exec("rm -rf $temp_location/*");
   exec("mkdir -p $temp_location/data");
   exec("mkdir -p $temp_location/tables");
   if (!file_exists("$dump_location/data")) exec("mkdir -p $dump_location/data");
@@ -273,6 +273,8 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
 
   // Move the dump files to the working space's last dump
   if (file_exists($workspace_location)) exec("rm -rf $workspace_location/*");
+  exec("mkdir -p $workspace_location/data");
+  exec("mkdir -p $workspace_location/tables");
   exec("mv $temp_location/* $workspace_location");
 
   // Fix the users table issue with conflicting timestamps
@@ -393,8 +395,8 @@ function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastm
   // For now we're just going to directly copy everything to $dump_location
   // Eventually we'll actually perform a merge
   // Erasing directory without erasing folders for svn support
-  if (file_exists("$dump_location/tables")) exec("rm $dump_location/tables/*");
-  if (file_exists("$dump_location/data")) exec("rm $dump_location/data/*");
+  if (exec("ls $dump_location/tables")) exec("rm $dump_location/tables/*");
+  if (exec("ls $dump_location/data")) exec("rm $dump_location/data/*");
   exec("cp $workspace_location/table_list.txt $dump_location");
   exec("cp $workspace_location/tables/* $dump_location/tables");
   exec("cp $workspace_location/data/* $dump_location/data");
