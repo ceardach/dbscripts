@@ -1437,6 +1437,9 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
   $branch_location = "$dump_path/$branch";
   $temp_location = "$dump_path/tmp";
 
+  // Ensure tmp directory exists
+  if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
+
   // Check if the branch exists, otherwise fail
   if (!file_exists($branch_location)) {
     print "\n\nThe branch '$branch' does not exist\n\n";
@@ -1449,8 +1452,20 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
     return FALSE;
   }
 
-  // Ensure tmp directory exists
-  if (!file_exists($temp_location)) exec("mkdir -p $temp_location");
+  // Find all tables that use the increment as a foreign key
+  $table_references = dbscripts_get_table_references($table, $branch, $filter_option);
+  if (!is_array($table_references)) {
+    print "\n\nERROR: ".$table_references."\n\n";
+    return FALSE;
+  }
+
+  // Fail if there are any found possible references
+  if (array_key_exists('found', $table_references)) {
+    print "\n\nFAILED:  Possible references found for table '$table'\n\n";
+    print_r($table_references['found']);
+    print "\nUpdate '$script_path/config.reference.inc' with this reference\n\n";
+    return FALSE;
+  }
 
   // Find the largest increment value between $change_to and the current
   // increment. Use the highest increment
@@ -1565,21 +1580,6 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
     }
   }
   exec("echo '}' >> $temp_location/increment_pairs.awk");
-
-  // Find all tables that use the increment
-  $table_references = dbscripts_get_table_references($table, $branch, $filter_option);
-  if (!is_array($table_references)) {
-    print "\n\nERROR: ".$table_references."\n\n";
-    return FALSE;
-  }
-
-  // Fail if there are any found possible references
-  if (array_key_exists('found', $table_references)) {
-    print "\n\nFAILED:  Possible references found for table '$table'\n\n";
-    print_r($table_references['found']);
-    print "\nUpdate '$script_path/config.reference.inc' with this reference\n\n";
-    return FALSE;
-  }
 
   // Add system path patterns as references
   if (isset($system_paths[$table]['tables'])) {
