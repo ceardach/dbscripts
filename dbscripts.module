@@ -1444,8 +1444,6 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
   // Ensure tmp directory exists
   if (!file_exists($temp_location)) {
      exec("mkdir -p $temp_location");
-  } else {
-    exec("rm -rf $temp_location/*");
   }
 
   // Check if the branch exists, otherwise fail
