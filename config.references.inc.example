@@ -109,6 +109,8 @@ $tables_referenced = array(
       'aggregator_category_feed' => array('cid'),
       'biblio_collection' => array('cid'),
       'biblio_collection_type' => array('cid'),
+      'webform_component' => array('cid'),
+      'webform_submitted_data' => array('cid'),
     ),
   ),
 
@@ -147,10 +149,12 @@ $tables_referenced = array(
     ),
     'false positives' => array(
       'aggregator_category_feed' => array('cid'),
+      'aggregator_contributor' => array('cid'),
       'biblio_collection' => array('cid'),
       'biblio_collection_type' => array('cid'),
       'biblio_contributor' => array('cid'),
-      'aggregator_contributor' => array('cid'),
+      'webform_component' => array('cid'),
+      'webform_submitted_data' => array('cid'),
     ),
   ),
 
@@ -440,6 +444,7 @@ $tables_referenced = array(
   'users' => array(
     'references' => array(
       'authmap' => array('uid'),
+      'autologout' => array('uid'),
       'biblio_contributor_data' => array('drupal_uid'),
       'blogapi_files' => array('uid'),
       'comments' => array('uid'),
@@ -528,6 +533,11 @@ $tables_referenced = array(
       'webform_submitted_data' => array('sid'),
     ),
     'false positives' => array(
+      'rdf_data' => array('sid'),
+      'workflow_node' => array('sid'),
+      'workflow_node_history' => array('sid', 'old_sid'),
+      'workflow_states' => array('sysid'),
+      'workflow_transitions' => array('sid', 'target_sid'),
     ),
   ),
 
