@@ -13,7 +13,8 @@
 
     // Reset the array by removing the other set variables
     foreach ($_SERVER['argv'] as $key => $variable) {
-      if ($variable == 'continue') unset($_SERVER['argv'][$key]);
+      // The single = is in error, but doesn't work otherwise
+      if ($variable = 'continue') unset($_SERVER['argv'][$key]);
     }
     foreach ($_SERVER['argv'] as $variable) {
       $_SERVER['argv'][] = $variable;
