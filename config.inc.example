@@ -151,6 +151,7 @@ $tables_merge = array(
   'contact',
   'content_field_.*',
   'content_type_.*',
+  'entrez_hash',
   'feedapi',
   'feedapi_node_item',
   'feedapi_node_item_feed',
