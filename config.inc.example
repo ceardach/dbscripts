@@ -77,7 +77,6 @@ $tables_filtered =  array(
   'cache',
   'cache_.*',
   'views_object_cache',
-  'votingapi_cache',
 );
 
 // Tables for 'min' filtering option
