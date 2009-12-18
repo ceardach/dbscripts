@@ -1,5 +1,13 @@
 <?php
 
+/*
+ * Global locked function so db scripts can be locked from restore at various input gathering parts
+ */
+function dbscripts_locked($in_locked = NULL) {
+  static $locked = 0;
+  if (isset($in_locked)) $locked = $in_locked;
+  return $locked;
+}
 /**
  * Dump the database
  *
@@ -441,6 +449,9 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
   if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
 
   $db_connection_settings = _dbscripts_db_connect();
+  if (dbscripts_locked()) {
+    return "\nDatabase locked to restore; please set locked to false.\n\n";
+  }
   if (!$db_connection_settings) {
     return "\nImproper database connection settings.\n\n";
   }
@@ -1758,7 +1769,7 @@ function dbscripts_raise_all_increments($dev_branch = 'development', $lastmerge_
 function _dbscripts_db_connect() {
   require('config.inc');
   require("$settings_path");
-
+  dbscripts_locked($dbscripts_locked);
   // Ensure required files are loaded
   if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
   if (!isset($db_url)) return "The file 'settings.php' file does not exist or db_url variable is not set..";
