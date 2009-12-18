@@ -295,6 +295,7 @@ $tables_referenced = array(
 
   'node' => array(
     'references' => array(
+      'apachesolr_search_node'=>array('nid'),
       'biblio' => array('nid'),
       'biblio_collection' => array('nid'),
       'biblio_contributor' => array('nid'),
@@ -319,6 +320,7 @@ $tables_referenced = array(
       'menu_node' => array('nid'),
       'nat' => array('nid'),
       'node_access' => array('nid'),
+      'node_comment_statistics'=>array('nid'),
       'node_field_rdf' => array('property_nid'),
       'node_revisions' => array('nid'),
       'node_type_rdf' => array('class_nid'),
@@ -482,8 +484,10 @@ $tables_referenced = array(
       'legal_accepted' => array('uid'),
       'location_instance' => array('uid'),
       'og_notifications' => array('uid'),
+      'masquerade_users' => array('uid_to','uid_from'),
       'messaging_store' => array('uid'),
       'node' => array('uid'),
+      'node_comment_statistics' => array('last_comment_uid'),
       'node_revisions' => array('uid'),
       'og_uid' => array('uid'),
       'og_uid_global' => array('uid'),
@@ -498,7 +502,7 @@ $tables_referenced = array(
       'workflow_node_history' => array('uid'),
     ),
     'false positives' => array(
-      'feedapi_node_item' => array('guid'),
+      'feedapi_node_item' => array('guid','sfuid'),
     ),
   ),
 
