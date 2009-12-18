@@ -177,6 +177,7 @@ $tables_referenced = array(
       'flag_actions' => array('fid'),
       'flag_content' => array('fid'),
       'flag_counts' => array('fid'),
+      'flag_note' => array('fid'),
       'flag_types' => array('fid'),
     ),
   ),
@@ -207,12 +208,17 @@ $tables_referenced = array(
       'trigger_assignments' => array('aid'),
     ),
   ),
-
+  'flag_content' => array(
+    'references' => array(
+      'flag_note' => array('fcid'),
+    ),
+  ),
   'flags' => array(
     'references' => array(
       'flag_actions' => array('fid'),
       'flag_content' => array('fid'),
       'flag_counts' => array('fid'),
+      'flag_note' => array('fid'),
       'flag_types' => array('fid'),
     ),
     'false positives' => array(
@@ -447,6 +453,7 @@ $tables_referenced = array(
       'content_type_.*' => array('field_*_uid'),
       'files' => array('uid'),
       'flag_content' => array('uid', array('content_type' => 'user', 'content_id' => '*')),
+      'flag_note' => array('uid'),
       'invite' => array('uid'),
       'invite_notifications' => array('uid'),
       'legal_accepted' => array('uid'),
