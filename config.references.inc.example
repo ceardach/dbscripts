@@ -208,6 +208,7 @@ $tables_referenced = array(
       'trigger_assignments' => array('aid'),
     ),
   ),
+  
   'flag_content' => array(
     'references' => array(
       'flag_note' => array('fcid'),
@@ -241,6 +242,12 @@ $tables_referenced = array(
     ),
   ),
 
+  'languages' => array(
+    'references' => array(
+      'node' => array('language'),
+    ),
+  ),
+  
   'legal_conditions' => array(
     'references' => array(
       'legal_accepted' => array('tc_id'),

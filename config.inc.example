@@ -160,6 +160,7 @@ $tables_merge = array(
   'image',
   'image_attach',
   'img_assist_map',
+  'languages',
   'legal_accepted',
   'legal_conditions',
   'menu_links',
