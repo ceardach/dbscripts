@@ -149,6 +149,8 @@ $tables_merge = array(
   'contact',
   'content_field_.*',
   'content_type_.*',
+  'draggableviews_collapsed',
+  'draggableviews_structure',
   'feedapi',
   'feedapi_node_item',
   'feedapi_node_item_feed',
