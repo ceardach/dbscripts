@@ -271,6 +271,7 @@ $tables_referenced = array(
     'references' => array(
       'book' => array('mlid'),
       'menu_links' => array('plid'),
+      'menu_node'=>array('mlid'),
     ),
     'false positives' => array(
     ),
@@ -305,10 +306,12 @@ $tables_referenced = array(
       'image_attach' => array('nid'),
       'img_assist_map' => array('nid', 'iid'),
       'nat' => array('nid'),
+      'menu_node' => array('nid'),
       'node_access' => array('nid'),
       'node_field_rdf' => array('property_nid'),
       'node_revisions' => array('nid'),
       'node_type_rdf' => array('class_nid'),
+      'node' => array('tnid'),
       'og' => array('nid'),
       'og_access_post' => array('nid'),
       'og_ancestry' => array('nid', 'group_nid'),
@@ -332,7 +335,6 @@ $tables_referenced = array(
       'workflow_node' => array('nid'),
       'workflow_node_history' => array('nid'),
       'workflow_scheduled_transition' => array('nid'),
-      'node' => array('tnid'),
     ),
     'false positives' => array(
       'content_field_.*' => array('field_*_fid', 'field_*_list', 'field_*_data'),

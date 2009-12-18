@@ -164,6 +164,7 @@ $tables_merge = array(
   'legal_accepted',
   'legal_conditions',
   'menu_links',
+  'menu_node',
   'menu_router',
   'nat',
   'node',
