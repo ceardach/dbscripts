@@ -163,6 +163,8 @@ $tables_merge = array(
   'languages',
   'legal_accepted',
   'legal_conditions',
+  'location_instance',
+  'location',
   'menu_links',
   'menu_node',
   'menu_router',

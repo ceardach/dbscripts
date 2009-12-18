@@ -267,6 +267,14 @@ $tables_referenced = array(
     ),
   ),
 
+  'location' => array(
+    'references' => array(
+      'location_instance' => array('lid'),
+      'content_field_.*' => array('field_*_lid'),
+      'content_type_.*' => array('field_*_lid'),
+    ),
+  ),
+
   'menu_links' => array(
     'references' => array(
       'book' => array('mlid'),
@@ -305,8 +313,9 @@ $tables_referenced = array(
       'image' => array('nid'),
       'image_attach' => array('nid'),
       'img_assist_map' => array('nid', 'iid'),
-      'nat' => array('nid'),
+      'location_instance' => array('nid'),
       'menu_node' => array('nid'),
+      'nat' => array('nid'),
       'node_access' => array('nid'),
       'node_field_rdf' => array('property_nid'),
       'node_revisions' => array('nid'),
@@ -339,6 +348,7 @@ $tables_referenced = array(
     'false positives' => array(
       'content_field_.*' => array('field_*_fid', 'field_*_list', 'field_*_data'),
       'content_type_.*' => array('field_*_fid', 'field_*_list', 'field_*_data'),
+      'location_instance' => array('genid'),
       'simplenews_snid_tid' => array('snid'),
     ),
   ),
@@ -353,6 +363,7 @@ $tables_referenced = array(
       'content_field_.*' => array('vid'),
       'content_type_.*' => array('vid'),
       'forum' => array('vid'),
+      'location_instance' => array('vid'),
       'nat' => array('vid'),
       'node' => array('vid'),
       'simplenews_mail_spool' => array('vid'),
@@ -466,6 +477,7 @@ $tables_referenced = array(
       'invite' => array('uid'),
       'invite_notifications' => array('uid'),
       'legal_accepted' => array('uid'),
+      'location_instance' => array('uid'),
       'og_notifications' => array('uid'),
       'messaging_store' => array('uid'),
       'node' => array('uid'),
