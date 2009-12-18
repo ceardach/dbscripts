@@ -1770,7 +1770,7 @@ function _dbscripts_db_connect() {
   dbscripts_locked($dbscripts_locked);
   // Ensure required files are loaded
   if (!isset($dump_path)) return dbscripts_errors('missing_config');
-  if (!isset($db_url)) return dbscripts_errors('missing_file');
+  if (!isset($db_url)) return dbscripts_errors('missing_dburl');
 
   $db_url = is_array($db_url) ? $db_url['default'] : $db_url;
   $db = parse_url($db_url);
@@ -2381,6 +2381,9 @@ EOF;
 }
 
 
+function dbscripts_errors_format($error) {
+  return "\nFAILED: $error\n\n";
+}
 function dbscripts_errors($error_type=NULL,$extra=null) {
   static $error,$extra_info = array();
   
@@ -2390,46 +2393,46 @@ function dbscripts_errors($error_type=NULL,$extra=null) {
   if($error) {
     switch($error) {
       case 'parsing_db_url':
-        return "\nError parsing database url.\n\n";
+        return dbscripts_errors_format("Error parsing database url.");
       case 'missing_dburl':
-        return "\nThe file 'settings.php' file does not exist or db_url variable is not set.\n\n";
+        return dbscripts_errors_format("The file 'settings.php' file does not exist or db_url variable is not set.");
       case 'missing_file':
-         return str_replace(array("missing_file"),$extra_info,"\nMissing missing_file.\n\n");
+         return str_replace(array("missing_file"),$extra_info,dbscripts_errors_format("Missing missing_file."));
       case 'missing_branch':
-         return str_replace(array("missing_branch"),$extra_info,"\nThe branch 'missing_branch' does not exist.\n\n");
+         return str_replace(array("missing_branch"),$extra_info,dbscripts_errors_format("The branch 'missing_branch' does not exist."));
       case 'missing_table':
-         return str_replace(array("missing_table"),$extra_info,"\nThe table 'missing_table' does not exist.\n\n");
+         return str_replace(array("missing_table"),$extra_info,dbscripts_errors_format("The table 'missing_table' does not exist."));
       /*Configuration messages*/
       case 'missing_config':
-        return "\nThe file 'config.inc' does not exist. Copy from the example version and change the variables to their desired values.\n\n";
+        return dbscripts_errors_format("The file 'config.inc' does not exist. Copy from the example version and change the variables to their desired values.");
       case 'missing_config_references':
-        return "\nThe file 'config.references.inc' does not exist.  Copy from the e example version and change the variables to their desired values\n\n"; 
+        return dbscripts_errors_format("The file 'config.references.inc' does not exist.  Copy from the example version and change the variables to their desired values"); 
       case 'bad_database_connection':
-        return "\nImproper database connection settings.\n\n";
+        return dbscripts_errors_format("Improper database connection settings.");
       case 'empty_data':
-        return "\nEmpty data returned.  There may be a problem connecting to the database.\n\n";  
+        return dbscripts_errors_format("Empty data returned.  There may be a problem connecting to the database.");  
         
       /*Restore related messages*/
       case 'locked':
-        return "The database has been locked to restore. Please edit settings to set $dbscripts_locked to false in order to restore.";
+        return dbscripts_errors_format("The database has been locked to restore. Please edit settings to set $dbscripts_locked to false in order to restore.");
       case 'path_missing':
-        return str_replace(array("location"),$extra_info,"\nThe path does not exist: location\n\n");
+        return str_replace(array("location"),$extra_info,dbscripts_errors_format("The path does not exist: location"));
       case 'restore_paths':
-        return "\nError finding paths to restore.\n\n";
+        return dbscripts_errors_format("Error finding paths to restore.");
         
       /*Merge related messages*/
       case 'missing_merge_files':
-        return str_replace(array("branch"),$extra_info,"\nFAILED: Missing database files for merge: branch\n\n");
+        return str_replace(array("branch"),$extra_info,dbscripts_errors_format("Missing database files for merge: branch"));
       case 'missing_merge_table':
-        return str_replace(array("table"),$extra_info,"\nFAILED: I thought you resolved conflicts in 'table', but the file is missing.\nAre you trying to confuse me??\n\n");
+        return str_replace(array("table"),$extra_info,dbscripts_errors_format("I thought you resolved conflicts in 'table', but the file is missing.\nAre you trying to confuse me??"));
       case 'still_conflicted':
-        return str_replace(array("table"),$extra_info,"\nFAILED: 'table' still has conflicts, please resolve them first.\n\n");
+        return str_replace(array("table"),$extra_info,dbscripts_errors_format("'table' still has conflicts, please resolve them first."));
       case 'missing_merge_file':
-        return str_replace(array("file"),$extra_info,"\nFAILED: 'I cannot find 'conflict_file', so I cannot continue :(");
+        return str_replace(array("file"),$extra_info,dbscripts_errors_format("'I cannot find 'conflict_file', so I cannot continue :("));
       case 'missing_merge_references':
-        return "\nFAILED: Merge failed. Cannot continue if there are unconfigured references.\n\n";
+        return dbscripts_errors_format("Merge failed. Cannot continue if there are unconfigured references.");
       default:
-        return 'Unknown error.';
+        return dbscripts_errors_format('Unknown error.');
     } 
   }
 }
