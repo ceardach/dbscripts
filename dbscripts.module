@@ -1761,21 +1761,17 @@ function _dbscripts_db_connect() {
 
   // Ensure required files are loaded
   if (!isset($dump_path)) return "The file 'config.inc' does not exist.  Copy from the example version?";
-  if (!isset($db_url)) return "The file 'settings.php' file does not exist.";
+  if (!isset($db_url)) return "The file 'settings.php' file does not exist or db_url variable is not set..";
 
-  preg_match('/'.$dbtype.':\/\/([^:]+):([^@]+)@([^\/]+)\/(.+)/', $db_url, $db_settings);
-
-  if (empty($db_settings)) {
-    return FALSE;
-  } else {
-
-    $dbuser = $db_settings[1];
-    $dbpassword = $db_settings[2];
-    $dbhost = $db_settings[3];
-    $dbname = $db_settings[4];
-
-    return "-u $dbuser -p$dbpassword -h $dbhost $dbname";
+  $db_url = is_array($db_url) ? $db_url['default'] : $db_url;
+  $db = parse_url($db_url);
+  $db['db'] = ltrim($db['path'], '/');
+  $output = '';
+  foreach (array('host'=>'h ','user'=> 'u ','pass'=>'p', 'db'=>'') as $pos=>$arg) {
+    if ($db[$pos]) $output .= ($arg? " -$arg":' ') . $db[$pos];  
   }
+  if ($output) return $output ;
+  else return "Error parsing database url.";
 }
 
 
