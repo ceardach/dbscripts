@@ -105,7 +105,6 @@ $tables_filtered_l2 =  array(
   'messaging_store',
   'mollom',
   'node_counter',
-  'node_comment_statistics',
   'notifications',
   'notifications_event',
   'notifications_fields',
