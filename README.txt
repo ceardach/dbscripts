@@ -118,7 +118,21 @@ Tips
     
     Use the 'Mode' module to create development, production and read-only
     sets of permissions.  Enable the "read only" mode when merging.
+    
+    Ignore workspace and tmp directories in the subversion.
+    
+    For svn:
+    cd <database folder>
+    svn propedit svn:ignore . 
+    Add in lines
 
+
+workspace
+tmp
+
+   Save and check in. If they have already been added, use svn rm tmp workspace. 
+   
+   For git use a .gitignore file and add the path to the tmp and workspace in. 
 
 MERGING DATABASES 
 
