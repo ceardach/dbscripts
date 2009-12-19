@@ -8,6 +8,7 @@ function dbscripts_locked($in_locked = NULL) {
   if (isset($in_locked)) $locked = $in_locked;
   return $locked;
 }
+
 /**
  * Dump the database
  *
@@ -28,10 +29,13 @@ function dbscripts_locked($in_locked = NULL) {
  *   'none' - NO filtering is performed whatsoever.  The entire database is
  *       dumped.
  */
-function dbscripts_dump($branch = 'development', $filter_option = 'full', $lastmerge_branch = 'last-merge') {
-  require('config.inc');
-  require('config.references.inc');
-
+function dbscripts_dump($options) {
+  require($options['configure_file']);
+  extract($options); // any options should override ones set in configure files
+  // we do it this way so that if a configure file sets what it's corresponding reference is the corresponding reference will be included instead of the default. 
+  if (!$reference_file) $reference_file = 'config.references.inc';
+  require($reference_file);
+  
   // Ensure required files are loaded
   if (!isset($dump_path)) return dbscripts_errors('missing_config');
   if (!isset($tables_referenced)) return dbscripts_errors('missing_config_references');
@@ -1801,7 +1805,9 @@ function _dbscripts_get_options($argv) {
   // Set which branch to use
   $use_default_branch = FALSE;
   if(isset($argv[1])) {
-    if(in_array($argv[1],array('min','none','full'))) {
+    if (substr($argv[1],0,1)=='-'){
+      $use_default_branch = TRUE;
+    } elseif(in_array($argv[1],array('min','none','full'))) {
       $use_default_branch = TRUE;
       $options['filter'] = $argv[1];
     }
@@ -1813,7 +1819,9 @@ function _dbscripts_get_options($argv) {
   // Set which last-merge to use
   $use_default_lastmerge = FALSE;
   if(isset($argv[2])) {
-    if(in_array($argv[2],array('min','none','full'))) {
+    if (substr($argv[2],0,1)=='-'){
+      $use_default_lastmerge = TRUE;
+    } elseif(in_array($argv[2],array('min','none','full'))) {
       $use_default_lastmerge = TRUE;
       $options['filter'] = $argv[2];
     }
@@ -1828,7 +1836,30 @@ function _dbscripts_get_options($argv) {
       $options['filter'] = $argv[3];
     }
   }
-
+  if (!$options['filter']) $options['filter'] = 'full';
+ foreach($argv as $arg) {
+    $begin = substr($arg,0,5);
+    $end = substr($arg,5);
+    switch($begin) {
+      case '-fc==': // configure file
+        $options['configure_file'] = $end; 
+      break;
+      case '-fr==': // configure file
+        $options['reference_file'] = $end; 
+      break;
+      case '-ps==':
+        $options['script_path'] = $end;
+      break;
+      case '-pd==':
+        $options['dump_path'] = $end;
+      break;
+    }
+  }
+  if (!$options['configure_file']) $options['configure_file'] = 'config.inc';
+  
+  /*FIXME due to differing variables, set these for now. Repleace in functions later*/
+  $options['lastmerge_branch'] = $options['last-merge'];
+  $options['filter_option'] = $options['filter'];
   return $options;
 }
 
