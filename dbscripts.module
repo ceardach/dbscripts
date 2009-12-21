@@ -12,24 +12,11 @@ function dbscripts_locked($in_locked = NULL) {
 /**
  * Dump the database
  *
- * @param $branch
- *   Branch that the database should be dumped to.  Defaults to 'development'.
- *   Alternative options that are supported by default are 'production' and
- *   'last-merge'.  Other string patterns may be used if you wish to dump the
- *   the database to an alternate location.
- * @param $filter_option
- *   Choose what level of filtering should be performed during the dump.
- *   Filter levels are configured in config.inc
- *   'full' - Default option.  Removes the full option of data from the dump.
- *       Most useful for removing user, sessions and cache data.  Use this when
- *       dumping a development database.
- *   'min' - Removes only a select minimum of data from the dump.  Most useful
- *       for removing sessions and cache data.  Use this when dumping a
- *       production database.
- *   'none' - NO filtering is performed whatsoever.  The entire database is
- *       dumped.
+ * @param $options
+ *    An array containing various options for the merge. Most contain a configure_file, filter_option, branch_primary, branch_last_merge, branch_production
  */
 function dbscripts_dump($options) {
+  $options = _dbscripts_get_options($options,'dump');
   require($options['configure_file']);
   extract($options); // any options should override ones set in configure files
   // we do it this way so that if a configure file sets what it's corresponding reference is the corresponding reference will be included instead of the default. 
@@ -47,8 +34,8 @@ function dbscripts_dump($options) {
   }
 
   // Define paths
-  $dump_location = "$dump_path/$branch";
-  $lastmerge_location = "$dump_path/$lastmerge_branch";
+  $dump_location = "$dump_path/$branch_primary";
+  $lastmerge_location = "$dump_path/$branch_last_merge";
   $temp_branch = "tmp";
   $temp_location = "$dump_path/$temp_branch";
   $workspace_branch = "workspace/last-dump";
@@ -62,7 +49,7 @@ function dbscripts_dump($options) {
   if (!file_exists("$dump_location/tables")) exec("mkdir -p $dump_location/tables");
 
   $lastmerge_exists = FALSE;
-  if (file_exists("$lastmerge_location") && file_exists("$dump_location/table_list.txt") && $branch != $lastmerge_branch) {
+  if (file_exists("$lastmerge_location") && file_exists("$dump_location/table_list.txt") && $branch_primary != $branch_last_merge) {
     $lastmerge_exists = TRUE;
   }
 
@@ -71,18 +58,18 @@ function dbscripts_dump($options) {
   $fix_user_table = FALSE;
   switch($filter_option){
     case 'none':
-      $message = "Performed a full database dump to $branch.";
+      $message = "Performed a full database dump to $branch_primary.";
       break;
 
     case 'min':
       $tables_cleared = array_merge($tables_filtered, $tables_filtered_l1);
-      $message = "Dumped the database to $branch with minimal filtering.";
+      $message = "Dumped the database to $branch_primary with minimal filtering.";
       break;
 
     default:
       $tables_cleared = array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2);
       $fix_user_table = $lastmerge_exists ? TRUE : FALSE;
-      $message = "Dumped the database to $branch with full filtering options.";
+      $message = "Dumped the database to $branch_primary with full filtering options.";
       break;
   }
 
@@ -125,7 +112,7 @@ function dbscripts_dump($options) {
   }
 
   // Find out which tables contain new data, and potentially new data
-  if ($branch != $lastmerge_branch && $lastmerge_exists) {
+  if ($branch_primary != $branch_last_merge && $lastmerge_exists) {
 
     // Get all tables that have content that would need to be merged
     $tables_to_merge = _dbscripts_process_tables($temp_branch, $tables_merge, FALSE);
@@ -135,7 +122,7 @@ function dbscripts_dump($options) {
 
       // Get the current and lastmerge increments of the table
       $increment = dbscripts_get_table_increment($table, $temp_branch);
-      $increment_lastmerge = dbscripts_get_table_increment($table, $lastmerge_branch);
+      $increment_lastmerge = dbscripts_get_table_increment($table, $branch_last_merge);
       if (is_numeric($increment['num']) && !is_numeric($increment_lastmerge['num'])) {
         $increment_lastmerge['num'] = '0';
       }
@@ -153,7 +140,7 @@ function dbscripts_dump($options) {
 
             // Don't continue if this table is production-only
             if (!in_array($referenced_table, $tables_override)) {
-              $primary_keys = dbscripts_get_table_primary_keys($referenced_table, $branch);
+              $primary_keys = dbscripts_get_table_primary_keys($referenced_table, $branch_primary);
               if (is_array($primary_keys)) {
                 foreach ($columns as $column) {
                   if (in_array($column, $primary_keys)) {
@@ -367,7 +354,8 @@ function dbscripts_dump($options) {
 /**
  * Erase the database
  *
- * @param $filter_option
+ * @param $options
+ *    Must contain filter_option and configure_file
  *   Choose what level of filtering should be performed while erasing the
  *   database.  Filter levels are configured in config.inc.  Any options set to
  *   be filtered will be subsequently PRESERVED in the database, and not
@@ -381,8 +369,10 @@ function dbscripts_dump($options) {
  *   'none' - NO filtering is performed whatsoever.  The entire database will
  *       be erased.
  */
-function dbscripts_erase($filter_option = 'full') {
-  require('config.inc');
+function dbscripts_erase($options) {
+  if (!$options['options_processed']) $options = _dbscripts_get_options($options,'erase');
+  require($options['configure_file']);
+  extract($options); 
 
   // Ensure required files are loaded
   if (!isset($dump_path)) return dbscripts_errors('missing_config');
@@ -448,8 +438,10 @@ function dbscripts_erase($filter_option = 'full') {
  *   'none' - NO filtering is performed whatsoever.  The entire database is
  *       erased from MySQL and restored with the data from the given file.
  */
-function dbscripts_restore($branch = 'development', $filter_option = 'full') {
-  require('config.inc');
+function dbscripts_restore($options) {
+  $options = _dbscripts_get_options($options,'restore');
+  require($options['configure_file']);
+  extract($options); 
 
   // Ensure required files are loaded
   if (!isset($dump_path)) return dbscripts_errors('missing_config');
@@ -464,7 +456,7 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
   }
 
   // Set locations
-  $dump_location = "$dump_path/$branch";
+  $dump_location = "$dump_path/$branch_primary";
   $workspace_location = "$dump_path/workspace/last-restore";
 
   // Check that the requested location exists
@@ -494,10 +486,10 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
   }
 
   // Erase the database so any tables that were removed stay removed
-  dbscripts_erase($filter_option);
+  dbscripts_erase($options);
 
   // Get a list of tables to restore by removing $tables_preserved from the list of all tables
-  $tables_restored = _dbscripts_process_tables($branch, $tables_preserved);
+  $tables_restored = _dbscripts_process_tables($branch_primary, $tables_preserved);
   if (($error = dbscripts_errors())) return $error;
   elseif (!is_array($tables_restored)) {
     return dbscripts_errors('restore_paths');
@@ -530,34 +522,22 @@ function dbscripts_restore($branch = 'development', $filter_option = 'full') {
  * You really only need to set the following parameters for expert use.
  * Otherwise this function can be run with no options.
  *
- * @param $dev_branch
- *   Location of the database file that was used for 'development'.  Only
- *   configuration and content changes will be preserved.  All user data will
- *   be lost.
- * @param $lastmerge_branch
- *   Location of the database file that was used to represent the state the
- *   last time both production and development were merged.  This is important
- *   to be able to track the difference between an addition and a subtraction.
- * @param $prod_branch
- *   Location of the database file that is used as 'production'.  Only content
- *   and user data will be perserved.  All other data will be lost.
+ * @param $options
+ *    An array containing various options for the merge. Most contain a configure_file.
  */
-function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-merge', $prod_branch = 'production', $continue = FALSE) {
-  require('config.inc');
+function dbscripts_merge($options) {
+  $options = _dbscripts_get_options($options,'merge');
+  require($options['configure_file']);
+  extract($options); 
 
   // Ensure required files are loaded
   if (!isset($dump_path)) return dbscripts_errors('missing_config');
 
-  // If empty data gets sent through, reset it to defaults
-  if (!$dev_branch) $dev_branch = 'development';
-  if (!$lastmerge_branch) $lastmerge_branch = 'last-merge';
-  if (!$prod_branch) $prod_branch = 'production';
-
   // Set all locations
   $temp_location = "$dump_path/tmp";
-  $dev_location = "$dump_path/$dev_branch";
-  $lastmerge_location = "$dump_path/$lastmerge_branch";
-  $prod_location = "$dump_path/$prod_branch";
+  $dev_location = "$dump_path/$branch_primary";
+  $lastmerge_location = "$dump_path/$branch_last_merge";
+  $prod_location = "$dump_path/$branch_production";
   $merge_location = "$temp_location/merge";
   $tmpdev_branch = "tmp/dev";
   $tmpdev_location = "$dump_path/$tmpdev_branch";
@@ -565,9 +545,9 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
 
   // Ensure all the branches exist
   $missing_branch = '';
-  if (!file_exists($dev_location)) $missing_branch .= $dev_branch.' ';
-  if (!file_exists($lastmerge_location)) $missing_branch .= $lastmerge_branch.' ';
-  if (!file_exists($prod_location)) $missing_branch .= $prod_branch.' ';
+  if (!file_exists($dev_location)) $missing_branch .= $branch_primary.' ';
+  if (!file_exists($lastmerge_location)) $missing_branch .= $branch_last_merge.' ';
+  if (!file_exists($prod_location)) $missing_branch .= $branch_production.' ';
 
   // Cancel merge if all branches do not exist
   if ($missing_branch) {
@@ -672,23 +652,23 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
     exec("cp $dev_location/data/* $tmpdev_location/data");
 
     // Define the tables, fail if they don't return arrays
-    $tables_content = _dbscripts_process_tables($dev_branch, $tables_merge, FALSE);
-    $tables_prod = _dbscripts_process_tables($prod_branch, $tables_override, FALSE);
-    $tables_dev = _dbscripts_process_tables($dev_branch, array_merge($tables_merge, $tables_override));
+    $tables_content = _dbscripts_process_tables($branch_primary, $tables_merge, FALSE);
+    $tables_prod = _dbscripts_process_tables($branch_production, $tables_override, FALSE);
+    $tables_dev = _dbscripts_process_tables($branch_primary, array_merge($tables_merge, $tables_override));
     if (($error = dbscripts_errors())) return $error; 
     
     
     // Raise all the increments of the content tables of development to above be production values
     if ($raise_increments_on_merge) {
-      print "\nRaising increments of the '$dev_branch' branch ";
+      print "\nRaising increments of the '$branch_primary' branch ";
       foreach ($tables_content as $table) {
         print "."; // gheto status messages
         // Find the last-merge value
-        $lastmerge_increment = dbscripts_get_table_increment($table, $lastmerge_branch);
+        $lastmerge_increment = dbscripts_get_table_increment($table, $branch_last_merge);
         $start_at = $lastmerge_increment['num'];
 
         // Find the production value
-        $production_increment = dbscripts_get_table_increment($table, $prod_branch);
+        $production_increment = dbscripts_get_table_increment($table, $branch_production);
         $change_to = $production_increment['num'];
 
         if ($start_at < $change_to) {
@@ -705,7 +685,7 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
     foreach (array_merge($tables_dev, $tables_content, $tables_prod) as $table) {
       if (file_exists("$tmpdev_location/tables/$table.sql")) {
         $dev_increment = dbscripts_get_table_increment($table, $tmpdev_branch);
-        $prod_increment = dbscripts_get_table_increment($table, $prod_branch);
+        $prod_increment = dbscripts_get_table_increment($table, $branch_production);
 
         if ($dev_increment['num'] >= $prod_increment) {
           exec("cp $tmpdev_location/tables/$table.sql $merge_location/tables");
@@ -894,8 +874,10 @@ function dbscripts_merge($dev_branch = 'development', $lastmerge_branch = 'last-
  *   Branch to make the changes on.
  */
 function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch = 'development', $filter_option = 'full') {
-  require('config.inc');
-  require('config.references.inc');
+  $options = _dbscripts_get_options();
+  require($options['configure_file']);
+  if (!$reference_file) $reference_file = 'config.references.inc';
+  require($reference_file);
 
   // Ensure required files are loaded
   if (!isset($dump_path)) return dbscripts_errors('missing_config');
@@ -1285,8 +1267,11 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
  *    like when dumping and restoring.
  */
 function dbscripts_get_table_references($table, $branch, $filter_option = 'full', $error_check = TRUE) {
-  require('config.inc');
-  require('config.references.inc');
+  $options = _dbscripts_get_options();
+  require($options['configure_file']);
+  extract($options);
+  if (!$reference_file) $reference_file = 'config.references.inc';
+  require($reference_file);
 
   // Ensure required files are loaded
   if (!isset($dump_path)) return dbscripts_errors('missing_config');
@@ -1462,7 +1447,8 @@ function dbscripts_get_table_references($table, $branch, $filter_option = 'full'
  *    possibly have a different increment.
  */
 function dbscripts_get_table_increment($table, $branch) {
-  require('config.inc');
+  $options = _dbscripts_get_options();
+  require($options['configure_file']);
 
   // Ensure required files are loaded
   if (!isset($dump_path)) return dbscripts_errors('missing_config');
@@ -1509,7 +1495,8 @@ function dbscripts_get_table_increment($table, $branch) {
  *   Branch to check in
  */
 function dbscripts_get_table_primary_keys($table, $branch) {
-  require('config.inc');
+  $options = _dbscripts_get_options();
+  require($options['configure_file']);
 
   // Ensure required files are loaded
   if (!isset($dump_path)) return dbscripts_errors('missing_config');
@@ -1552,7 +1539,8 @@ function dbscripts_get_table_primary_keys($table, $branch) {
  *    like when dumping and restoring.
  */
 function dbscripts_find_possible_table_references($table, $branch, $filter_option = "full") {
-  require('config.inc');
+  $options = _dbscripts_get_options();
+  require($options['configure_file']);
 
   // Ensure required files are loaded
   if (!isset($dump_path)) return dbscripts_errors('missing_config');
@@ -1639,7 +1627,8 @@ function dbscripts_find_possible_table_references($table, $branch, $filter_optio
  *    like when dumping and restoring.
  */
 function dbscripts_find_tables_with_increment($branch, $filter_option = "full") {
-  require('config.inc');
+  $options = _dbscripts_get_options();
+  require($options['configure_file']);
 
   // Ensure required files are loaded
   if (!isset($dump_path)) return dbscripts_errors('missing_config');
@@ -1698,38 +1687,35 @@ function dbscripts_find_tables_with_increment($branch, $filter_option = "full") 
  * @param $dev_branch
  *   Location of the branch you wish to make the changes on.  All actions will
  *   effect and modify this branch.
- * @param $lastmerge_branch
+ * @param $branch_last_merge
  *   Location of the branch that was used to represent the state the
  *   last time the other two branches were merged.  This is used as reference
  *   to discover the start of increment rewriting.
- * @param $prod_branch
+ * @param $branch_production
  *   Location of the branch that will be used as reference to discover at which
  *   point the rewrite should start at.
  */
-function dbscripts_raise_all_increments($dev_branch = 'development', $lastmerge_branch = 'last-merge', $prod_branch = 'production') {
-  require('config.inc');
+function dbscripts_raise_all_increments($options) {
+  $options = _dbscripts_get_options($options,'raise');
+  require($options['configure_file']);
+  extract($options); 
 
   // Ensure required files are loaded
   if (!isset($dump_path)) return dbscripts_errors('missing_config');
 
-  // If empty data gets sent through, reset it to defaults
-  if (!$dev_branch) $dev_branch = 'development';
-  if (!$lastmerge_branch) $lastmerge_branch = 'last-merge';
-  if (!$prod_branch) $prod_branch = 'production';
-
   // Set all locations
   $temp_location = "$dump_path/tmp";
-  $dev_location = "$dump_path/$dev_branch";
-  $lastmerge_location = "$dump_path/$lastmerge_branch";
-  $prod_location = "$dump_path/$prod_branch";
+  $dev_location = "$dump_path/$branch_primary";
+  $lastmerge_location = "$dump_path/$branch_last_merge";
+  $prod_location = "$dump_path/$branch_production";
 
   // Ensure all the branches exist
   $missing_branch = '';
-  if (!file_exists($dev_location)) $missing_branch .= $dev_branch.' ';
-  if (!file_exists($lastmerge_location)) $missing_branch .= $lastmerge_branch.' ';
-  if (!file_exists($prod_location)) $missing_branch .= $prod_branch.' ';
+  if (!file_exists($dev_location)) $missing_branch .= $branch_primary.' ';
+  if (!file_exists($lastmerge_location)) $missing_branch .= $branch_last_merge.' ';
+  if (!file_exists($prod_location)) $missing_branch .= $branch_production.' ';
 
-  // Cancel merge if all branches do not exist
+  // Cancel merge if any branches do not exist
   if ($missing_branch) {
     return dbscripts_errors('missing_merge_files',array($missing_branch));
   }
@@ -1746,16 +1732,16 @@ function dbscripts_raise_all_increments($dev_branch = 'development', $lastmerge_
   
   foreach ($tables as $table) {
     // Find the last-merge value
-    $lastmerge_increment = dbscripts_get_table_increment($table, $lastmerge_branch);
+    $lastmerge_increment = dbscripts_get_table_increment($table, $branch_last_merge);
     $start_at = $lastmerge_increment['num'];
 
     // Find the production value
-    $production_increment = dbscripts_get_table_increment($table, $prod_branch);
+    $production_increment = dbscripts_get_table_increment($table, $branch_production);
     $change_to = $production_increment['num'];
 
     if ($start_at < $change_to) {
       // Raise the increments
-      dbscripts_raise_table_increments($table, $start_at, $change_to, $dev_branch);
+      dbscripts_raise_table_increments($table, $start_at, $change_to, $branch_primary);
     }
   }
 
@@ -1769,7 +1755,8 @@ function dbscripts_raise_all_increments($dev_branch = 'development', $lastmerge_
  * Helper function for dump, erase and restore functions
  */
 function _dbscripts_db_connect() {
-  require('config.inc');
+  $options = _dbscripts_get_options();
+  require($options['configure_file']);
   require("$settings_path");
   dbscripts_locked($dbscripts_locked);
   // Ensure required files are loaded
@@ -1790,76 +1777,108 @@ function _dbscripts_db_connect() {
 
 
 /**
- * Get options for dump file and filtering
+ * Get options
  *
- * Helper function for restore.php and dump.php
  *
  * @param $argv
  *   Pass in the $_SERVER['argv'] variable to return options set when running
  *   the script.
  */
-function _dbscripts_get_options($argv) {
-  // Set default filter option
-  $options['filter'] = 'full';
-
-  // Set which branch to use
-  $use_default_branch = FALSE;
-  if(isset($argv[1])) {
-    if (substr($argv[1],0,1)=='-'){
-      $use_default_branch = TRUE;
-    } elseif(in_array($argv[1],array('min','none','full'))) {
-      $use_default_branch = TRUE;
-      $options['filter'] = $argv[1];
+function _dbscripts_get_options($argv=NULL,$case = '') {
+  static $options;
+    // Set default filter option
+  if (is_array($argv)) {
+   unset($argv[0]);
+   foreach($argv as $k => $arg) {
+      $begin = substr($arg,0,5);
+      $end = substr($arg,5);
+      switch($begin) {
+        case '-fc==': // configure file
+          $options['configure_file'] = $end; 
+          unset($argv[$k]);
+        break;
+        case '-fr==': // configure file
+          $options['reference_file'] = $end; 
+          unset($argv[$k]);
+        break;
+        case '-ps==':
+          $options['script_path'] = $end;
+          unset($argv[$k]);
+        break;
+        case '-pd==':
+          $options['dump_path'] = $end;
+          unset($argv[$k]);
+        break;
+        default:
+          if (substr($arg,0,1)=='-') unset($argv[$k]);;
+        break;
+      }
     }
-  } else {
-    $use_default_branch = TRUE;
-  }
-  $options['branch'] = $use_default_branch ? 'development' : $argv[1];
-
-  // Set which last-merge to use
-  $use_default_lastmerge = FALSE;
-  if(isset($argv[2])) {
-    if (substr($argv[2],0,1)=='-'){
-      $use_default_lastmerge = TRUE;
-    } elseif(in_array($argv[2],array('min','none','full'))) {
-      $use_default_lastmerge = TRUE;
-      $options['filter'] = $argv[2];
+    if (!$options['configure_file']) $options['configure_file'] = 'config.inc';
+    foreach (array('min','none','full') as $filter) {
+      if (in_array($filter,$argv)) {
+        $pos = array_search($filter,$argv);
+        $options['filter_option'] = $filter; 
+        unset($argv[$pos]);
+        break;
+      }
     }
-  } else {
-    $use_default_lastmerge = TRUE;
-  }
-  $options['last-merge'] = $use_default_lastmerge ? 'last-merge' : $argv[2];
-
-  // Set filter option
-  if(isset($argv[3])) {
-    if(in_array($argv[3],array('min','none','full'))) {
-      $options['filter'] = $argv[3];
+    if (!$options['filter_option']) $options['filter_option'] = 'full';
+    // merge specific
+    if (($pos = array_search('continue',$argv))) {
+      $options['continue'] = 'continue';
+      unset($argv[$pos]);
     }
-  }
-  if (!$options['filter']) $options['filter'] = 'full';
- foreach($argv as $arg) {
-    $begin = substr($arg,0,5);
-    $end = substr($arg,5);
-    switch($begin) {
-      case '-fc==': // configure file
-        $options['configure_file'] = $end; 
-      break;
-      case '-fr==': // configure file
-        $options['reference_file'] = $end; 
-      break;
-      case '-ps==':
-        $options['script_path'] = $end;
-      break;
-      case '-pd==':
-        $options['dump_path'] = $end;
-      break;
+    // Special case options for specific operations, bound to position for historic reasons
+    $special = array(
+      'dump' => array(
+        1=> array('key'=>'branch_primary',
+          'default'=>'development'
+          ),
+        2=> array('key'=>'branch_last_merge',
+          'default'=>'last-merge'
+          ),
+      ),
+      'merge' => array(
+        1=> array('key'=>'branch_primary',
+          'default'=>'development'
+          ),
+        2=> array('key'=>'branch_last_merge',
+          'default'=>'last-merge'
+          ),
+        3=> array('key'=>'branch_production',
+          'default'=>'production'
+          ),
+      ),
+      'raise' => array(
+        1=> array('key'=>'branch_primary',
+          'default'=>'development'
+          ),
+        2=> array('key'=>'branch_last_merge',
+          'default'=>'last-merge'
+          ),
+        3=> array('key'=>'branch_production',
+          'default'=>'production'
+          ),
+      ),
+      'restore' => array(
+        1=> array('key'=>'branch_primary',
+          'default'=>'development'
+          ),
+      ),
+    );
+    
+    if ($case && $special[$case]) {
+      foreach ($special[$case] as $pos => $info) {
+        if ($argv[$pos]) {
+          $options[$info['key']] = $argv[$pos];
+        } else {
+          $options[$info['key']] = $info['default'];
+        }
+      }
     }
+    $options['options_processed'] = 1;
   }
-  if (!$options['configure_file']) $options['configure_file'] = 'config.inc';
-  
-  /*FIXME due to differing variables, set these for now. Repleace in functions later*/
-  $options['lastmerge_branch'] = $options['last-merge'];
-  $options['filter_option'] = $options['filter'];
   return $options;
 }
 
@@ -1879,8 +1898,8 @@ function _dbscripts_get_options($argv) {
  *    Should matches in $tables_compare be removed from the list, or kept
  */
 function _dbscripts_process_tables($branch, $tables_compare, $remove_match = TRUE) {
-  require('config.inc');
-
+  $options = _dbscripts_get_options();
+  require($options['configure_file']);
   // Ensure required files are loaded
   if (!isset($dump_path)) return dbscripts_errors('missing_config');
 
@@ -1925,7 +1944,97 @@ function _dbscripts_process_tables($branch, $tables_compare, $remove_match = TRU
   }
 }
 
+/**
+ * Find
+ *
+ * @param $options
+ *   Params to find information
+ */
+function dbscripts_find($options) {
+  // Find all tables with auto_increment
+  if (isset($options[1]) && $options[1] == 'increment') {
+    $branch = isset($options[2]) ? $options[2] : 'development';
+    $filter_option = isset($options[3]) ? $options[3] : 'full';
+    $list = dbscripts_find_tables_with_increment($branch, $filter_option);
+    return print_r($list,1);
 
+  // Find all possible references to a given table
+  } elseif (isset($options[1]) && $options[1] == 'possible-references') {
+    $branch = isset($options[3]) ? $options[3] : 'development';
+    $filter_option = isset($options[4]) ? $options[4] : 'full';
+
+    $list = array();
+  	if(isset($options[2]) && $options[2] != 'all') {
+      $table = $options[2];
+      $list = dbscripts_find_possible_table_references($table, $branch, $filter_option);
+  	} else {
+      //print "\n Please wait. This can take awhile.  'ctrl+c' to cancel.\n\n";
+      $table_list = dbscripts_find_tables_with_increment($branch, $filter_option);
+      if (is_array($table_list)) {
+        foreach ($table_list as $table) {
+        	$references = dbscripts_find_possible_table_references($table, $branch, $filter_option);
+          if (is_array($references)) {
+          	$list[$table] = $references;
+          }
+        }
+      } else {
+        // If not an array, pass through the error message
+      	return "\n$table_list\n\n";
+      }
+  	}
+    return print_r($list,1);
+
+  // Find all configured and possible references to a given table
+  } elseif (isset($options[1]) && $options[1] == 'references') {
+    if(isset($options[2]) && $options[2] != 'all' && $options[2] != 'found') {
+      $table =  $options[2];
+      $branch = isset($options[3]) && $options[3] != 'found' ? $options[3] : 'development';
+      $filter_option = isset($options[4]) && $options[4] != 'found' ? $options[4] : 'full';
+      $found_only = in_array('found', $options) ? TRUE : FALSE;
+      $references = dbscripts_get_table_references($table, $branch, $filter_option);
+
+      if (!$found_only) {
+        return print_r($references,1);
+      } else {
+        if (isset($references['found'])) {
+          return print_r($references['found'],1);
+        } else {
+          return "\nNo new references found for '$table'.\n\n";
+        }
+      }
+    } else {
+      if (file_exists("$dump_path/development/table_list.txt")) {
+        //print "\n Please wait. This can take awhile.  'ctrl+c' to cancel.\n\n";
+
+        $all_tables = file("$dump_path/development/table_list.txt", FILE_IGNORE_NEW_LINES);
+        $tables = _dbscripts_process_tables('development', array_merge($tables_filtered, $tables_filtered_l1, $tables_filtered_l2));
+        foreach ($tables as $table) {
+          if (in_array('found', $options)) {
+            $table_references = dbscripts_get_table_references($table, 'development');
+            if (isset($table_references['found'])) $references[$table] = $table_references['found'];
+          } else {
+            $table_references = dbscripts_get_table_references($table, 'development');
+            if (is_array($table_references)) {
+              $references[$table] = $table_references;
+            }
+          }
+        }
+        if (isset($references)) {
+           return print_r($references, 1);
+        } else {
+          return "\nNo new references found.\n\n";
+        }
+      } else {
+        return "\nMust provide a table to check.\n\n";
+      }
+
+    }
+
+  // Fail
+  } else {
+  	return "\nNot a valid search.\n\n";
+  }
+}
 
 /**
  * Return help for each script
@@ -1935,7 +2044,8 @@ function _dbscripts_process_tables($branch, $tables_compare, $remove_match = TRU
  *   'raise_increments'.
  */
 function dbscripts_help($script) {
-  require('config.inc');
+  $options = _dbscripts_get_options();
+  require($options['configure_file']);
   if (!isset($dump_path)) return dbscripts_errors('missing_config');
 
   switch ($script) {

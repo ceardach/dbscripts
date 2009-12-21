@@ -3,8 +3,7 @@
   require('dbscripts.module');
   if (in_array('help', $_SERVER['argv'])) {
     print dbscripts_help('dump');
-  } else {
-    $options = _dbscripts_get_options($_SERVER['argv']);
-    print dbscripts_dump($options);
+  } else {;
+    print dbscripts_dump($_SERVER['argv']);
   }
 ?>
