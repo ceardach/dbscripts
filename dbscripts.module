@@ -1483,7 +1483,7 @@ function dbscripts_get_table_increment($table, $branch) {
 
   $increment = FALSE;
   if(file_exists("$branch_location/tables/$table.sql")) {
-    if (exec("grep 'auto_increment' $branch_location/tables/$table.sql")) {
+    if (exec("grep -i 'auto_increment' $branch_location/tables/$table.sql")) {
       $inc_string = exec("grep 'AUTO_INCREMENT=' $branch_location/tables/$table.sql");
 
       $increment['num'] = '0';
@@ -1496,7 +1496,7 @@ function dbscripts_get_table_increment($table, $branch) {
         }
       }
 
-      $id_string = exec("grep 'auto_increment' $branch_location/tables/$table.sql");
+      $id_string = exec("grep -i 'auto_increment' $branch_location/tables/$table.sql");
       $id_string_parts = explode('`', $id_string);
       $increment['id'] = $id_string_parts[1];
     }
