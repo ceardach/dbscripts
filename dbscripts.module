@@ -1788,7 +1788,7 @@ function _dbscripts_db_connect() {
   $db['db'] = ltrim($db['path'], '/');
   $output = '';
   foreach (array('host'=>'h ','user'=> 'u ','pass'=>'p', 'db'=>'') as $pos=>$arg) {
-    if ($db[$pos]) $output .= ($arg? " -$arg":' ') . $db[$pos];  
+    if ($db[$pos]) $output .= ($arg? " -$arg":' ') . urldecode($db[$pos]);  
   }
   if ($output) return $output ;
   else return dbscripts_errors('parsing_db_url');
