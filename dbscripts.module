@@ -101,7 +101,7 @@ function dbscripts_dump($options) {
   if (file_get_contents("$temp_location/tables/{$table_list[0]}.sql") == '') {
     exec("rm -r $temp_location/*");
     return dbscripts_errors('empty_data');
-
+  }
   // Remove all AUTO_INCREMENT values of the filtered tables
   $tables_to_filter = _dbscripts_process_tables($temp_branch, $tables_cleared, FALSE);
   foreach ($tables_to_filter as $table) {
@@ -229,10 +229,12 @@ function dbscripts_dump($options) {
     $new_version = "$temp_location/users.sql";
 
     // Columns to work with (minus 1 for arrays)
-    $uid_column = 1;
-    $access_column = 10;
-    $login_column = 11;
-
+    $columns = _dbscripts_get_table_columns('users',$branch_primary);
+    $override_column = array('access','login');
+    if (is_array($user_override_columns)) $override_column = array_merge($override_column, $user_override_columns); // let config add other columns to override
+    foreach($override_column as $r) {
+      $cols[$r] =  array_search($r,$columns) +1;
+    }
     // Create a converted version of the user table
     exec("
         grep 'INSERT INTO' $dumped_version \\
@@ -268,9 +270,8 @@ function dbscripts_dump($options) {
     // Rewrite the timestamps
     foreach ($dumped_converted as $uid => $columns) {
       $rewritten_timestamps[$uid] = $columns;
-      if (isset($lastmerge_converted[$uid])) {
-        $rewritten_timestamps[$uid][$access_column] = $lastmerge_converted[$uid][$access_column];
-        $rewritten_timestamps[$uid][$login_column] = $lastmerge_converted[$uid][$login_column];
+      foreach($cols as $pos) {
+        $rewritten_timestamps[$uid][$pos] = $lastmerge_converted[$uid][$pos];
       }
     }
 
@@ -1239,7 +1240,24 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
 
 }
 
-
+function _dbscripts_get_table_columns($table,$branch){
+  $options = _dbscripts_get_options();
+  require($options['configure_file']);
+  extract($options);
+  $list = array();
+  $branch_location = "$dump_path/$branch";
+  $temp_location = "$dump_path/tmp";
+  if(file_exists("$branch_location/tables/$table.sql")) {
+    exec("grep '^  `' $branch_location/tables/$table.sql > $temp_location/columns.sql");
+    $columns = file("$temp_location/columns.sql", FILE_IGNORE_NEW_LINES);
+    foreach ($columns as $column) {
+      $parts = explode('`', $column);
+      $list[] = $parts[1];
+    }
+    exec("rm $temp_location/columns.sql");
+  }
+  return $list;
+}
 
 /**
  * Return actual references to a given table
