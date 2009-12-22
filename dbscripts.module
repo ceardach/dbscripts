@@ -441,7 +441,12 @@ function dbscripts_erase($options) {
 function dbscripts_restore($options) {
   $options = _dbscripts_get_options($options,'restore');
   require($options['configure_file']);
-  extract($options); 
+  extract($options);
+  //create a pre-restore dump based on option from command line or setting in cofiguration file
+  if  (($options['paranoia'] || $paranoia ) && !$options['not_paranoid']) {
+    $fake_options[1] = $options['paranoia']? $options['paranoia'] : $paranoia ;
+    dbscripts_dump($fake_options);
+  }
 
   // Ensure required files are loaded
   if (!isset($dump_path)) return dbscripts_errors('missing_config');
@@ -1824,6 +1829,14 @@ function _dbscripts_get_options($argv=NULL,$case = '') {
           $options['dump_path'] = $end;
           unset($argv[$k]);
         break;
+        case '-par=':
+          if ($end) $options['paranoia'] = trim($end,"=");
+          unset($argv[$k]);
+        break;
+        case 'nopar':
+          $options['not_paranoid'] = 1;
+          unset($argv[$k]);
+        break ;
         default:
           if (substr($arg,0,1)=='-') unset($argv[$k]);;
         break;
