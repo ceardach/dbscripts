@@ -6,7 +6,9 @@ REQUIRED
   - GNU Diff3.  Sun Solaris, for example, uses their own version of Diff3 
     which is incompatible with how it is used in this script.
 
-  - GNU AWK (GAWK).  Sun Solaris may not have a compatible version of AWK.  
+  - GNU AWK (GAWK).  Sun Solaris may not have a compatible version of AWK.
+  
+  - PHP5 (see issue http://drupal.org/node/502266)
 
 
 
