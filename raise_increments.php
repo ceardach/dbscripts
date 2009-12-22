@@ -4,6 +4,7 @@
   if (in_array('help', $_SERVER['argv'])) {
     print dbscripts_help('raise_increments');
   } else {
+    $options = $_SERVER['argv'];
     if (isset($options[1]) && $options[1] != 'all') {
       if (isset($options[3])) {
         $table = $options[1];

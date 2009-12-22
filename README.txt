@@ -133,7 +133,7 @@ tmp
    Save and check in. If they have already been added, use svn rm tmp workspace. 
    
    For git use a .gitignore file and add the path to the tmp and workspace in. 
-
+   
 MERGING DATABASES 
 
 WARNING:  Once you've performed a merge you *must* deploy it to the production 

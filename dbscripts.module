@@ -101,7 +101,6 @@ function dbscripts_dump($options) {
   if (file_get_contents("$temp_location/tables/{$table_list[0]}.sql") == '') {
     exec("rm -r $temp_location/*");
     return dbscripts_errors('empty_data');
-  }
 
   // Remove all AUTO_INCREMENT values of the filtered tables
   $tables_to_filter = _dbscripts_process_tables($temp_branch, $tables_cleared, FALSE);
@@ -675,7 +674,8 @@ function dbscripts_merge($options) {
           // Raise the increments
           $action = dbscripts_raise_table_increments($table, $start_at, $change_to, $tmpdev_branch);
           if (!$action) {
-            return dbscripts_errors('missing_config');          }
+            return dbscripts_errors('missing_config');          
+          }
         }
       }
       print "\n"; // gheto status messages
@@ -686,7 +686,6 @@ function dbscripts_merge($options) {
       if (file_exists("$tmpdev_location/tables/$table.sql")) {
         $dev_increment = dbscripts_get_table_increment($table, $tmpdev_branch);
         $prod_increment = dbscripts_get_table_increment($table, $branch_production);
-
         if ($dev_increment['num'] >= $prod_increment) {
           exec("cp $tmpdev_location/tables/$table.sql $merge_location/tables");
         } else {
@@ -893,14 +892,13 @@ function dbscripts_raise_table_increments($table, $start_at, $change_to, $branch
   }
 
   // Check if the branch exists, otherwise fail
-  if (!file_exists($branch_location)) {
+  if (!file_exists($branch_location)){
     return dbscripts_errors('missing_branch',array($branch));
   }
 
   // Check if the table exists, otherwise fail
   if (!file_exists("$branch_location/tables/$table.sql")) {
     return dbscripts_errors('missing_table',array($table));
-    return FALSE;
   }
 
   // Find all tables that use the increment as a foreign key
@@ -1500,7 +1498,6 @@ function dbscripts_get_table_primary_keys($table, $branch) {
 
   // Ensure required files are loaded
   if (!isset($dump_path)) return dbscripts_errors('missing_config');
-
   // Set locations
   $branch_location = "$dump_path/$branch";
 
@@ -1632,7 +1629,7 @@ function dbscripts_find_tables_with_increment($branch, $filter_option = "full") 
 
   // Ensure required files are loaded
   if (!isset($dump_path)) return dbscripts_errors('missing_config');
-
+  
   // Set location
   $branch_location = "$dump_path/$branch";
 
@@ -1943,6 +1940,7 @@ function _dbscripts_process_tables($branch, $tables_compare, $remove_match = TRU
     return $tables_match;
   }
 }
+
 
 /**
  * Find

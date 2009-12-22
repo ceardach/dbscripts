@@ -149,10 +149,12 @@ $tables_referenced = array(
     ),
     'false positives' => array(
       'aggregator_category_feed' => array('cid'),
+      'aggregator_contributor' => array('cid'),
       'biblio_collection' => array('cid'),
       'biblio_collection_type' => array('cid'),
       'biblio_contributor' => array('cid'),
-      'aggregator_contributor' => array('cid'),
+      'webform_component' => array('cid'),
+      'webform_submitted_data' => array('cid'),
     ),
   ),
 
@@ -179,7 +181,6 @@ $tables_referenced = array(
       'flag_actions' => array('fid'),
       'flag_content' => array('fid'),
       'flag_counts' => array('fid'),
-      'flag_note' => array('fid'),
       'flag_types' => array('fid'),
     ),
   ),
@@ -210,19 +211,12 @@ $tables_referenced = array(
       'trigger_assignments' => array('aid'),
     ),
   ),
-  
-  'flag_content' => array(
-    'references' => array(
-      'flag_note' => array('fcid'),
-    ),
-  ),
 
   'flags' => array(
     'references' => array(
       'flag_actions' => array('fid'),
       'flag_content' => array('fid'),
       'flag_counts' => array('fid'),
-      'flag_note' => array('fid'),
       'flag_types' => array('fid'),
     ),
     'false positives' => array(
@@ -245,13 +239,6 @@ $tables_referenced = array(
     ),
   ),
 
-
-  'languages' => array(
-    'references' => array(
-      'node' => array('language'),
-    ),
-  ),
-  
   'legal_conditions' => array(
     'references' => array(
       'legal_accepted' => array('tc_id'),
@@ -271,19 +258,10 @@ $tables_referenced = array(
     ),
   ),
 
-  'location' => array(
-    'references' => array(
-      'location_instance' => array('lid'),
-      'content_field_.*' => array('field_*_lid'),
-      'content_type_.*' => array('field_*_lid'),
-    ),
-  ),
-
   'menu_links' => array(
     'references' => array(
       'book' => array('mlid'),
       'menu_links' => array('plid'),
-      'menu_node'=>array('mlid'),
     ),
     'false positives' => array(
     ),
@@ -299,7 +277,6 @@ $tables_referenced = array(
 
   'node' => array(
     'references' => array(
-      'apachesolr_search_node'=>array('nid'),
       'biblio' => array('nid'),
       'biblio_collection' => array('nid'),
       'biblio_contributor' => array('nid'),
@@ -309,8 +286,6 @@ $tables_referenced = array(
       'comments' => array('nid'),
       'content_field_.*' => array('nid', 'field_*_nid'),
       'content_type_.*' => array('nid', 'field_*_nid'),
-      'draggableviews_collapsed' => array('parent_nid'),
-      'draggableviews_structure' => array('nid'),
       'feedapi' => array('nid'),
       'feedapi_mapper' => array('nid'),
       'feedapi_node_item' => array('nid'),
@@ -322,14 +297,11 @@ $tables_referenced = array(
       'image_attach' => array('nid'),
       'img_assist_map' => array('nid', 'iid'),
       'location_instance' => array('nid'),
-      'menu_node' => array('nid'),
       'nat' => array('nid'),
       'node_access' => array('nid'),
-      'node_comment_statistics'=>array('nid'),
       'node_field_rdf' => array('property_nid'),
       'node_revisions' => array('nid'),
       'node_type_rdf' => array('class_nid'),
-      'node' => array('tnid'),
       'og' => array('nid'),
       'og_access_post' => array('nid'),
       'og_ancestry' => array('nid', 'group_nid'),
@@ -358,6 +330,7 @@ $tables_referenced = array(
       'content_field_.*' => array('field_*_fid', 'field_*_list', 'field_*_data'),
       'content_type_.*' => array('field_*_fid', 'field_*_list', 'field_*_data'),
       'location_instance' => array('genid'),
+      'node' => array('tnid'),
       'simplenews_snid_tid' => array('snid'),
     ),
   ),
@@ -487,20 +460,16 @@ $tables_referenced = array(
       'comments' => array('uid'),
       'content_field_.*' => array('field_*_uid'),
       'content_type_.*' => array('field_*_uid'),
-      'draggableviews_collapsed' => array('uid'),
       'files' => array('uid'),
       'flag_content' => array('uid', array('content_type' => 'user', 'content_id' => '*')),
-      'flag_note' => array('uid'),
       'invite' => array('uid'),
       'invite_notifications' => array('uid'),
       'legal_accepted' => array('uid'),
       'location_instance' => array('uid'),
-      'og_notifications' => array('uid'),
-      'masquerade_users' => array('uid_to','uid_from'),
       'messaging_store' => array('uid'),
       'node' => array('uid'),
-      'node_comment_statistics' => array('last_comment_uid'),
       'node_revisions' => array('uid'),
+      'og_notifications' => array('uid'),
       'og_uid' => array('uid'),
       'og_uid_global' => array('uid'),
       'pdsolicit' => array('uid_sender', 'uid_recipient'),
@@ -514,7 +483,7 @@ $tables_referenced = array(
       'workflow_node_history' => array('uid'),
     ),
     'false positives' => array(
-      'feedapi_node_item' => array('guid','sfuid'),
+      'feedapi_node_item' => array('guid'),
     ),
   ),
 
